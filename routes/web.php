@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
@@ -30,13 +31,9 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
 
-Route::get('/orders', function () {
-    return view('orders.index');
-})->name('orders.index');
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 
-Route::get('/orders/{orderNumber}', function () {
-    return view('orders.show');
-})->name('orders.show');
+Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('orders.show');
 
 Route::get('/orders/{orderNumber}/payment', [PaymentController::class, 'create'])->name('payments.create');
 

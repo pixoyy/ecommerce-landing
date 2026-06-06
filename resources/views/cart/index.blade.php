@@ -134,8 +134,20 @@
 
     {{-- Remove confirmation modal --}}
     <div x-show="removeModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" x-cloak>
-        <div class="fixed inset-0 bg-black/40" @click="removeModalOpen = false"></div>
-        <div class="relative bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
+        <div class="fixed inset-0 bg-black/40" @click="removeModalOpen = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"></div>
+        <div class="relative bg-white rounded-xl p-6 max-w-sm w-full shadow-xl"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
             <h3 class="text-lg font-semibold text-stone-900">Hapus item ini?</h3>
             <p class="mt-1 text-sm text-stone-500">Item akan dihapus dari keranjang Anda.</p>
             <div class="mt-4 flex gap-3 justify-end">

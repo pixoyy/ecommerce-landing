@@ -1,7 +1,7 @@
 <a href="{{ $link ?? '#' }}" class="group block bg-white border border-stone-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
     <div class="aspect-square bg-stone-100 overflow-hidden">
         @if($thumbnail ?? null)
-            <img src="{{ $thumbnail }}" alt="{{ $name ?? 'Produk' }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            <img src="{{ $thumbnail }}" alt="{{ $name ?? 'Produk' }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
         @else
             <div class="w-full h-full flex items-center justify-center text-stone-300">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">

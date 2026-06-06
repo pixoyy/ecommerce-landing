@@ -7,7 +7,7 @@
     <title>@yield('title', config('app.name')) — EssenseLuxe</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased bg-stone-50 text-stone-900" x-data>
+<body class="font-sans antialiased bg-stone-50 text-stone-900" x-data x-cloak>
     <div class="min-h-screen flex flex-col">
         @include('components.navbar')
 

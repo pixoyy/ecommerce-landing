@@ -24,22 +24,29 @@
                             </svg>
                             <span x-text="Number($store.auth.user?.point_balance || 0).toLocaleString('id-ID')"></span>
                         </a>
-                        <a href="{{ route('cart.index') }}" class="relative p-2 text-stone-600 hover:text-stone-900 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="{{ route('cart.index') }}" class="relative p-2 text-stone-600 hover:text-stone-900 transition-colors" aria-label="Keranjang">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
                             </svg>
                             <span class="absolute -top-1 -right-1 bg-stone-900 text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full"
-                                  x-text="$store.cart.totalItemCount" x-show="$store.cart.totalItemCount > 0"></span>
+                                  x-text="$store.cart.totalItemCount" x-show="$store.cart.totalItemCount > 0" aria-live="polite"></span>
                         </a>
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" @click.outside="open = false"
-                                    class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors">
+                                    class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 transition-colors"
+                                    aria-label="Menu pengguna">
                                 <span x-text="$store.auth.user?.name || 'User'"></span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
                             <div x-show="open" @click.outside="open = false"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-100"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-95"
                                  class="absolute right-0 mt-1 w-48 bg-white border border-stone-200 rounded-lg shadow-lg z-50">
                                 <a href="{{ route('orders.index') }}" class="block px-4 py-2 text-sm text-stone-600 hover:bg-stone-50">Pesanan Saya</a>
                                 <a href="{{ route('rewards.index') }}" class="block px-4 py-2 text-sm text-stone-600 hover:bg-stone-50">Poin Reward</a>
@@ -60,8 +67,8 @@
                     </div>
                 </template>
 
-                <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 text-stone-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 text-stone-600" aria-label="Buka menu navigasi">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
@@ -70,6 +77,12 @@
     </div>
 
     <div x-show="mobileOpen" @click.outside="mobileOpen = false"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
          class="md:hidden border-t border-stone-200 bg-white">
         <div class="px-4 py-3">
             <input type="search" placeholder="Cari produk..."

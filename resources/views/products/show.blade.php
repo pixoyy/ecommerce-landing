@@ -27,10 +27,10 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                 {{-- Left: Gallery --}}
                 <div>
-                    <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden">
-                        <img :src="selectedImage" :alt="product.name"
-                             class="w-full h-full object-cover cursor-pointer" @click="openLightbox = true">
-                    </div>
+                         <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden">
+                            <img :src="selectedImage" :alt="product.name" loading="lazy"
+                                 class="w-full h-full object-cover cursor-pointer" @click="openLightbox = true">
+                        </div>
                     <div class="mt-3 flex gap-2 overflow-x-auto" x-show="(product.images || []).length > 0">
                         <template x-for="(img, idx) in product.images" :key="img.id">
                             <button @click="selectedImageIndex = idx"

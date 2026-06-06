@@ -9,6 +9,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RewardController;
 use App\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,9 +41,7 @@ Route::get('/orders/{orderNumber}/payment', [PaymentController::class, 'create']
 
 Route::get('/orders/{orderNumber}/tracking', [ShipmentController::class, 'show'])->name('shipments.tracking');
 
-Route::get('/rewards', function () {
-    return view('rewards.index');
-})->name('rewards.index');
+Route::get('/rewards', [RewardController::class, 'index'])->name('rewards.index');
 
 Route::get('/profile', function () {
     return view('profile.edit');

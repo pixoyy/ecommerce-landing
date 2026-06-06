@@ -9,6 +9,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -37,9 +38,7 @@ Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->name('ord
 
 Route::get('/orders/{orderNumber}/payment', [PaymentController::class, 'create'])->name('payments.create');
 
-Route::get('/orders/{orderNumber}/tracking', function () {
-    return view('shipments.tracking');
-})->name('shipments.tracking');
+Route::get('/orders/{orderNumber}/tracking', [ShipmentController::class, 'show'])->name('shipments.tracking');
 
 Route::get('/rewards', function () {
     return view('rewards.index');

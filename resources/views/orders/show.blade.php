@@ -138,6 +138,69 @@
                     </template>
                 </div>
 
+                {{-- Shipment Tracking --}}
+                <div class="mt-4 bg-white border border-stone-200 rounded-xl p-6">
+                    <h2 class="text-lg font-semibold text-stone-900 mb-4">Pengiriman</h2>
+
+                    {{-- No shipment --}}
+                    <div x-show="!order.shipment">
+                        <p class="text-sm text-stone-500">Belum ada data pengiriman.</p>
+                    </div>
+
+                    {{-- Shipment exists --}}
+                    <template x-if="order.shipment">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <p class="text-sm text-stone-500">Kurir</p>
+                                    <p class="font-semibold text-stone-900" x-text="order.shipment.courier"></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-stone-500">No. Resi</p>
+                                    <p class="font-mono font-semibold text-stone-900" x-text="order.shipment.tracking_number"></p>
+                                </div>
+                            </div>
+
+                            {{-- Timeline --}}
+                            <div x-show="order.shipment.logs && order.shipment.logs.length > 0" class="relative mt-4 pt-4 border-t border-stone-100">
+                                <template x-for="(log, idx) in order.shipment.logs" :key="log.id">
+                                    <div class="flex gap-4 pb-6 relative last:pb-0">
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-3.5 h-3.5 rounded-full shrink-0 z-10"
+                                                 :class="idx === order.shipment.logs.length - 1
+                                                     ? 'bg-stone-900 ring-4 ring-stone-100'
+                                                     : 'bg-emerald-500 ring-4 ring-emerald-100'">
+                                                <svg x-show="idx < order.shipment.logs.length - 1" class="w-3.5 h-3.5 text-white p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </div>
+                                            <div x-show="idx < order.shipment.logs.length - 1"
+                                                 class="w-0.5 flex-1 bg-stone-200 -mt-1"></div>
+                                        </div>
+                                        <div class="flex-1 min-w-0 -mt-0.5">
+                                            <p class="font-medium text-stone-900 text-sm" x-text="log.status"></p>
+                                            <p x-show="log.note" class="text-xs text-stone-500 mt-0.5" x-text="log.note"></p>
+                                            <p class="text-xs text-stone-400 mt-0.5">
+                                                <span x-show="log.location" x-text="log.location"></span>
+                                                <span x-show="log.location && log.created_at"> — </span>
+                                                <span x-text="formatDate(log.created_at)"></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <p x-show="!order.shipment.logs || order.shipment.logs.length === 0" class="text-sm text-stone-500 mt-2">
+                                Belum ada riwayat pengiriman.
+                            </p>
+
+                            <a :href="'/orders/' + order.order_number + '/tracking'" class="mt-3 inline-block text-xs text-stone-500 hover:text-stone-900 underline">
+                                Lihat detail pengiriman
+                            </a>
+                        </div>
+                    </template>
+                </div>
+
                 {{-- Cancel button --}}
                 <div x-show="order.status === 1 || order.status === 2" class="mt-4">
                     <button @click="cancelModalOpen = true"

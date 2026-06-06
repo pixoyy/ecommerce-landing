@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,9 +38,7 @@ Route::get('/orders/{orderNumber}', function () {
     return view('orders.show');
 })->name('orders.show');
 
-Route::get('/orders/{orderNumber}/payment', function () {
-    return view('payments.create');
-})->name('payments.create');
+Route::get('/orders/{orderNumber}/payment', [PaymentController::class, 'create'])->name('payments.create');
 
 Route::get('/orders/{orderNumber}/tracking', function () {
     return view('shipments.tracking');

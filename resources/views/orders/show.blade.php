@@ -208,6 +208,63 @@
                         Batalkan Pesanan
                     </button>
                 </div>
+
+                {{-- Review Section (only for delivered orders) --}}
+                <div x-show="order.status === 4" class="mt-4 bg-white border border-stone-200 rounded-xl p-6">
+                    <h2 class="text-lg font-semibold text-stone-900 mb-4">Ulasan Produk</h2>
+                    <template x-for="item in (order.items || [])" :key="item.id">
+                        <div class="py-4 border-b border-stone-100 last:border-0">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-12 h-12 shrink-0 bg-stone-100 rounded-lg overflow-hidden">
+                                    <img :src="item.product_image || item.product?.thumbnail" :alt="item.product_name" class="w-full h-full object-cover">
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-medium text-stone-900 text-sm" x-text="item.product_name"></p>
+                                    <p class="text-xs text-stone-500" x-text="item.variant_label"></p>
+                                </div>
+                            </div>
+
+                            {{-- Already reviewed --}}
+                            <div x-show="reviewedItems[item.id]" class="text-sm text-emerald-600 font-medium">
+                                Ulasan sudah diberikan
+                            </div>
+
+                            {{-- Review form --}}
+                            <div x-show="!reviewedItems[item.id]">
+                                {{-- Star selector --}}
+                                <div class="flex items-center gap-1 mb-3">
+                                    <template x-for="star in 5" :key="star">
+                                        <button @click="setRating(item.id, star)" @mouseenter="hoverRating = star" @mouseleave="hoverRating = 0"
+                                                class="p-0.5 transition-colors">
+                                            <svg class="w-6 h-6" :class="star <= (hoverRating || reviewForms[item.id]?.rating || 0) ? 'text-amber-400' : 'text-stone-300'" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                            </svg>
+                                        </button>
+                                    </template>
+                                </div>
+
+                                {{-- Textarea --}}
+                                <textarea x-model="reviewForms[item.id].review" maxlength="1000" rows="2"
+                                          placeholder="Tulis ulasan Anda (opsional)..."
+                                          class="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-900"></textarea>
+                                <div class="flex justify-between items-center mt-1">
+                                    <p x-show="reviewErrors[item.id]" class="text-xs text-red-600" x-text="reviewErrors[item.id]"></p>
+                                    <p class="text-xs text-stone-400 ml-auto" x-text="(reviewForms[item.id]?.review?.length || 0) + '/1000'"></p>
+                                </div>
+
+                                {{-- Submit --}}
+                                <div class="mt-3 flex items-center gap-3">
+                                    <button @click="submitReview(item)" :disabled="isSubmittingReview[item.id]"
+                                            class="bg-stone-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50">
+                                        <span x-show="!isSubmittingReview[item.id]">Kirim Ulasan</span>
+                                        <span x-show="isSubmittingReview[item.id]">Mengirim...</span>
+                                    </button>
+                                    <span x-show="reviewSuccess[item.id]" class="text-sm text-emerald-600 font-medium">Ulasan berhasil dikirim!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </template>
 
@@ -236,6 +293,12 @@
                         error: null,
                         cancelModalOpen: false,
                         isCancelling: false,
+                        reviewedItems: {},
+                        reviewForms: {},
+                        reviewErrors: {},
+                        reviewSuccess: {},
+                        isSubmittingReview: {},
+                        hoverRating: 0,
 
                         STATUSES: {
                             1: { label: 'Menunggu Pembayaran', class: 'bg-yellow-100 text-yellow-800' },
@@ -274,6 +337,11 @@
                             try {
                                 const res = await apiClient.get('/orders/' + orderNumber);
                                 this.order = res.data.data || {};
+                                (this.order.items || []).forEach(item => {
+                                    if (!this.reviewForms[item.id]) {
+                                        this.reviewForms[item.id] = { rating: 0, review: '' };
+                                    }
+                                });
                             } catch (err) {
                                 if (err.response?.status === 404) {
                                     this.error = 'Pesanan tidak ditemukan.';
@@ -296,6 +364,40 @@
                                 alert(msg);
                             } finally {
                                 this.isCancelling = false;
+                            }
+                        },
+
+                        setRating(itemId, rating) {
+                            if (!this.reviewForms[itemId]) {
+                                this.reviewForms[itemId] = { rating: 0, review: '' };
+                            }
+                            this.reviewForms[itemId].rating = rating;
+                        },
+
+                        async submitReview(item) {
+                            this.reviewErrors[item.id] = null;
+                            this.reviewSuccess[item.id] = false;
+
+                            const form = this.reviewForms[item.id];
+                            if (!form || !form.rating) {
+                                this.reviewErrors[item.id] = 'Harap pilih rating.';
+                                return;
+                            }
+
+                            this.isSubmittingReview[item.id] = true;
+                            try {
+                                await apiClient.post('/orders/' + this.order.id + '/reviews', {
+                                    product_variant_id: item.product_variant_id,
+                                    rating: form.rating,
+                                    review: form.review || '',
+                                });
+                                this.reviewSuccess[item.id] = true;
+                                this.reviewedItems[item.id] = true;
+                            } catch (err) {
+                                const msg = err.response?.data?.message || 'Gagal mengirim ulasan.';
+                                this.reviewErrors[item.id] = msg;
+                            } finally {
+                                this.isSubmittingReview[item.id] = false;
                             }
                         },
 

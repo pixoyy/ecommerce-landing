@@ -3,20 +3,16 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('/products', function () {
-    return view('products.index');
-})->name('products.index');
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 
-Route::get('/products/{slug}', function () {
-    return view('products.show');
-})->name('products.show');
+Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 
 // Guest-only routes
 Route::middleware('guest')->group(function () {

@@ -42,7 +42,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get subtotal() {
-            return this.items.reduce((sum, item) => sum + item.subtotal, 0);
+            return this.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
         },
 
         setItems(items) {
@@ -73,6 +73,16 @@ document.addEventListener('alpine:init', () => {
 
         clear() {
             this.items = [];
+        },
+
+        async hydrate() {
+            if (!Alpine.store('auth').token) return;
+            try {
+                const res = await apiClient.get('/cart');
+                this.items = res.data.data || [];
+            } catch {
+                this.items = [];
+            }
         },
     });
 

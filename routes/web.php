@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
@@ -23,9 +24,7 @@ Route::middleware('guest')->group(function () {
 // Authenticated routes (auth protection handled client-side by Alpine.js)
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-Route::get('/cart', function () {
-    return view('cart.index');
-})->name('cart.index');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 
 Route::get('/checkout', function () {
     return view('checkout.index');

@@ -1,0 +1,86 @@
+ESSENSELUXE ADMIN — PROMPT CONTEXT
+
+Project scope
+- Repo: essenseluxe-admin
+- Stack: Laravel monolith, Blade/SSR, direct DB access
+- Purpose: internal admin panel for EssenseLuxe, not customer UI
+- Shared DB with API repo; admin repo does NOT call the API repo
+- Source docs: this spec, ERD PDF, acceptance criteria XLSX
+
+Authentication and access
+- Separate admin auth guard: admin
+- Customer auth guard remains web
+- Superadmin manages roles, admins, and authorizations
+- Admin+ can access operational modules based on RBAC
+- Login requires active, non-deleted admin
+- Logout must invalidate session and regenerate token
+
+Core platform rules
+- MySQL 8, InnoDB
+- Primary keys: INT UNSIGNED AUTO_INCREMENT
+- Soft deletes used widely
+- No JSON columns for structured relations
+- Monetary values use DECIMAL(15,2)
+- Slugs must be unique where used
+- SKU must be globally unique
+- Order numbers must be unique
+- One user_point row per user
+- One shipment per order
+
+Important concurrency rules
+- Use DB transactions for payment approval, rejection, shipment updates, order cancellation, stock changes, and point changes
+- Use lockForUpdate() when adjusting warehouse stock or point balances
+- Avoid partial updates; atomic behavior is required
+
+Main entities
+- roles, modules, authorization_types, authorizations
+- admins, users, user_points, point_transactions
+- file_storages, brands, categories, products, product_images, product_variants
+- warehouses, warehouse_stocks
+- promotions, promotion_items
+- carts, payment_accounts, orders, order_items
+- payments, shipments, shipment_tracking_logs
+- reviews
+
+MVP admin modules
+- Auth Admin
+- Role and authorization management
+- Admin management
+- User/customer management
+- Category management
+- Brand management
+- Product management
+- Product variant management
+- Warehouse management
+- Stock management
+- Promotion management
+- Payment account management
+- Order management
+- Payment confirmation
+- Shipment and tracking management
+- Reward point monitoring
+- Product review moderation
+- File storage viewer
+- Dashboard
+
+Module-specific rules to remember
+- Roles cannot be deleted if active admins still use them
+- Categories/brands/products/variants/warehouses/payment accounts cannot be deleted if still referenced by active data
+- Products need at least one active variant to be sellable
+- Promotion override price must be lower than normal variant price
+- Promotion periods must not overlap for the same variant
+- Order cancellation restores stock and redeemed points
+- Payment approval moves order to processing and sets paid_at
+- Shipment delivered grants earned points
+- Review visibility is toggled, not deleted
+
+Logging and audit expectations
+- Log login success via last_login
+- Log failed login attempts to application log
+- Many CRUD actions should be logged in application log, especially roles, admins, products, stock, promotions, payments, shipments, and reviews
+
+Safe prompt guidance
+- Read only relevant files for the module being changed
+- Prefer prompt context scoped to the target feature
+- Do not expose secrets, API keys, production config, or sensitive user data
+- Prefer step-by-step implementation with validation after each change

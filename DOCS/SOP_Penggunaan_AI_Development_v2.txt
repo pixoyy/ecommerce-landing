@@ -1,0 +1,231 @@
+STANDARD OPERATING PROCEDURE (SOP)
+Kebijakan Penggunaan AI dalam Pengembangan Software
+
+Berlaku untuk: Seluruh Tim Engineering
+Tools yang dicakup: Opencode, Deepseek, AI Agent, MCP, dan seluruh tools AI code generation lainnya
+Tanggal Berlaku: ________
+
+1. Tujuan
+SOP ini mengatur tata kelola, akuntabilitas, dan standar kualitas penggunaan AI dalam pengembangan software untuk menjaga stabilitas sistem, kualitas kode, efisiensi biaya, dan transparansi kontribusi.
+
+2. Prinsip Dasar
+1. AI adalah alat bantu, bukan pengambil keputusan.
+2. Seluruh output AI dianggap tidak terpercaya sebelum direview manual.
+3. Tanggung jawab akhir tetap berada pada developer.
+4. Penggunaan AI wajib transparan dan dapat ditelusuri.
+
+3. Kebijakan Branching & Prompting
+- DILARANG melakukan prompting langsung pada branch utama (alpha, staging, master, main).
+- Wajib menggunakan branch terpisah (feature/ai-*, fix/ai-*, refactor/ai-*).
+- Wajib testing lokal dan memastikan seluruh unit test lulus sebelum PR.
+
+4. Review Manual (Wajib)
+Seluruh kode, flow, refactor, query, dan perubahan arsitektur hasil AI WAJIB direview manual oleh minimal satu developer sebelum PR.
+
+5. Transparansi Git (Wajib)
+Setiap commit yang mengandung AI WAJIB mencantumkan deklarasi:
+[AI-ASSISTED: Nama Tools]
+Penjelasan singkat perubahan dan review manual yang dilakukan.
+
+6. Pull Request Governance
+Seluruh PR ke branch utama WAJIB direview dan disetujui Division Leader.
+Tidak diperbolehkan self-merge untuk PR yang mengandung AI.
+
+7. Kewajiban Dokumentasi Sebelum Prompting
+Pengembangan fitur/modul baru wajib memiliki System Flow, Functional Spec, dan Edge Case dari System Analyst sebelum prompting.
+
+8. Kebijakan Unit Test (Wajib untuk Project Baru)
+- Semua project baru wajib dimulai dengan unit test / test coverage.
+- Existing project wajib menambahkan unit test / test coverage secara bertahap pada setiap module atau module yang di-refactor, dimulai dari tanggal SOP berlaku.
+- Tidak wajib diproses semua sekaligus, tetapi tidak ada module baru yang tidak memiliki unit test / test coverage setelah tanggal SOP berlaku.
+- Unit test boleh di-generate AI tetapi mengikuti dokumen analis.
+- Edge case baru dari AI harus ditambahkan dulu ke dokumentasi analis.
+- Semua hasil AI wajib lulus seluruh unit test sebelum merge.
+
+9. Kebijakan Efisiensi Penggunaan AI
+Perbaikan minor, typo, small bug fix, atau penyesuaian kecil SANGAT DISARANKAN dilakukan manual tanpa prompting untuk menghindari pemborosan credit AI.
+
+10. Akuntabilitas
+Developer tetap bertanggung jawab penuh atas seluruh kode hasil AI. "AI yang generate" bukan alasan atas bug atau kesalahan sistem.
+
+11. Konsekuensi Pelanggaran
+3 tingkat pelanggaran:
+- Minor (git commit tanpa tag [AI-Assisted], tidak ada unit test pada module baru): Catatan dari division lead, diperbaiki dalam 1 hari kerja.
+- Sedang (self-merge AI PR tanpa persetujuan lead, prompting langsung pada branch utama): Incident report ke PM, wajib code review ulang seluruh module yang terdampak.
+- Tinggi (upload secret key / api key ke AI, koneksi AI ke DB Production): Dikategorikan sebagai pelanggaran keamanan sistem — eskalasi ke manajemen, audit akses.
+
+12. Prompting Guide
+Seluruh penggunaan AI WAJIB mengikuti panduan prompting internal perusahaan.
+Developer wajib:
+- Menggunakan konteks yang jelas (tujuan, batasan, requirement).
+- Menyertakan potongan kode relevan, bukan keseluruhan project.
+- Menghindari upload data sensitif (credential, production config, data user).
+- Menghindari prompt arsitektural besar tanpa diskusi teknis.
+Referensi panduan lengkap terdapat pada link eksternal: Claude Prompting Guide.
+
+13. Penggunaan MCP (Model Context Protocol / External Context Tools)
+1. Tidak diperbolehkan menghubungkan AI ke database production.
+2. Akses file system wajib dibatasi pada scope project terkait.
+3. Tidak diperbolehkan memberikan credential, API key, atau secret key ke AI.
+4. MCP hanya boleh digunakan untuk membantu analisis, bukan perubahan otomatis tanpa review.
+5. Konfigurasi MCP wajib mendapat persetujuan DevOps atau Division Leader.
+Pelanggaran dikategorikan sebagai pelanggaran keamanan sistem.
+
+14. Penggunaan AI Agent dan SubAgent
+1. Agent tidak diperbolehkan melakukan auto-commit atau auto-merge.
+2. Semua hasil kerja Agent wajib melalui branch terpisah dan review manual.
+3. Agent tidak boleh diberi akses penuh repository tanpa pembatasan scope.
+4. Agent tidak boleh dijalankan langsung pada environment production.
+5. Developer tetap menjadi penanggung jawab penuh atas output Agent.
+AI Agent diposisikan sebagai asisten eksekusi, bukan pengambil keputusan teknis.
+
+15. Standar Workflow Penggunaan AI untuk Development (New Project)
+Untuk menjaga kualitas implementasi dan menghindari penggunaan AI secara tidak terstruktur, seluruh proses development yang menggunakan AI WAJIB mengikuti workflow berikut.
+Pastikan seluruh dokumen yang akan digunakan dan akan di-generate itu masuk ke dalam 1 folder project bernama /docs.
+Struktur:
+/docs
+  /summary.md
+  /roadmap.md
+  /todo.md
+  /dokumen-dokumen dari analyst
+  ..dst
+  /planning
+    /phase-01-initialization
+      plan.md
+      verification.md
+      human-uat.md
+    /phase-02-rbac-auth
+      plan.md
+      verification.md
+      human-uat.md
+Workflow ini berlaku untuk:
+- Project Baru
+- Pengembangan fitur baru
+- Refaktor
+- Perubahan arsitektur
+Workflow ini tidak wajib untuk perubahan kecil (minor fix, typo).
+Phase terbagi dalam:
+- Phase 1 – Context Initialization
+- Phase 2 – Discussion, Research & Design Per Phase
+- Phase 3 – Implementation
+- Phase 4 – Human Verification
+- Phase 5 – Summary update
+- Phase 6 – Repeat or close milestone
+
+PHASE 1 – Context Initialization
+Developer wajib menginstruksikan AI untuk membaca dokumen dari System Analyst sebelum memulai pekerjaan.
+Dokumen yang harus dijadikan konteks:
+- Functional Specification
+- System Flow
+- Edge Cases
+- Requirement Document
+- ERD (untuk backend)
+Untuk FE / Mobile, tambahkan:
+- Design Figma (Hubungkan via MCP Figma)
+Lalu AI wajib diminta untuk menghasilkan:
+- context.md (hanya pada existing project)
+- roadmap.md
+- summary.md
+Penjelasan:
+- context.md: berisi rangkuman pemahaman AI terhadap sistem dan requirement. (hanya pada existing project)
+- roadmap.md: berisi breakdown fase development yang akan dilakukan AI.
+Contoh:
+Phase 1 – Data Structure & Unit tests
+Phase 2 – Core Logic
+Phase 3 – API / Service Layer
+Phase 4 – UI Integration
+Phase 5 – Validation & Edge Cases
+- summary.md: berisi ringkas proses implementasi. File ini akan terus diupdate setiap fase selesai.
+- todo.md: berisi list down step setiap phase pada roadmap, digunakan sebagai acuan pada setiap phase kedepannya.
+Simpan prompt utama setiap phase sebagai bagian dari prompt-log.md di bawah section ## Initial Prompt.
+TAMBAHAN, untuk project sederhana yang tidak menggunakan MCP Figma atau design system lainnya, gunakan Skill UI UX Pro Max dan generate 1 dokumen design rule untuk menjadi acuan design sederhana yang akan diikuti oleh AI.
+Simpan dokumen tersebut dengan nama design.md.
+
+PHASE 2 – Discussion, Research & Design Per Phase
+Setiap fase dalam roadmap WAJIB diskusikan terlebih dahulu dengan AI sebelum implementasi.
+Developer harus meminta AI untuk membuat:
+- verification.md
+- plan.md
+- human-uat.md
+- research.md (optional)
+Penjelasan:
+- verification.md: berisi list proses verifikasi hasil output AI setiap step. Fungsinya agar AI melakukan self verification apakah ada error atau miss-implement sebuah fitur. Biasanya dengan menjalankan beberapa script bawaan framework, misalnya php artisan pint atau npm run typecheck.
+- human-uat.md: berisi list UAT yang WAJIB diproses oleh dev secara manual untuk memastikan apa yang degenerate berjalan bagaimana mestinya. Jika admin, maka wajib dicoba seluruhnya meski hanya CRUD sederhana. Jika API, dicoba dengan Postman atau sejenisnya.
+- plan.md: berisikan daftar task implementasi step by step.
+Contoh:
+1. Create database schema
+2. Implement repository layer
+3. Implement service logic
+4. Add validation rules
+5. Write unit test
+Developer wajib melakukan review terhadap phase plan, verification dan human-uat.
+Jika tidak sesuai dengan dokumen analis, developer WAJIB meminta AI untuk melakukan revisi.
+
+PHASE 3 — Implementation
+Setelah todo.md disetujui, AI dapat diminta untuk mulai mengimplementasikan task.
+Aturan implementasi:
+- Implementasi harus mengikuti urutan task pada todo.md
+- Setiap step harus dapat direview developer
+- Developer tidak diperbolehkan menjalankan AI untuk perubahan besar tanpa kontrol step-by-step
+
+PHASE 4 — Human Verification (Mandatory)
+Setelah implementasi selesai, developer WAJIB menjalankan proses verifikasi manual sesuai dengan human-uat yang diberikan (plus beberapa case tambahan jika terpikirkkan).
+Developer wajib melakukan pengecekan satu per satu, setelah selesai, minta update bahwasannya UAT sudah selesai dan next step.
+
+PHASE 5 — Summary Update
+Setelah verifikasi selesai, developer harus meminta AI untuk memperbarui summary.md.
+Berisi:
+- Fase yang telah selesai
+- Perubahan penting
+- Catatan implementasi
+DAN, generate 1 file COMPLETED.md pada phase tersebut, bedanya summary hanya berisi catatan singkat, sedangkan completed.md berisi changes yang lebih detail.
+
+PHASE 6 — Repeat Next Phase Or close as milestone
+Setelah fase selesai, workflow kembali ke:
+Research -> Todo -> Implementation -> Verification -> Summary.
+Saat semua phase selesai, close milestone, pindahkan file-file terkait pada 1 folder milestone/[milestone-name-version], lalu buatkan 1 file milestone.md.
+File milestone.md akan menjadi referral milestone / phase development selanjutnya.
+
+16. Standar Workflow Penggunaan AI untuk Development (New Feature)
+Untuk feature baru pada project yang sudah berjalan, workflow hampir sama dengan project baru, namun terdapat tambahan kewajiban.
+Developer WAJIB menentukan file atau folder yang harus dibaca AI terlebih dahulu. Lalu berikan juga tujuan feature, perubahan yang diharapkan dan dokumen relevan dari analis.
+Contoh prompt:
+"Please read the following file and folders first for context: /app/Repositories/CustomerRepository.php /app/Repositories/TransactionRepository.php /resources/views/customer/ /resources/views/transaction/ Then read file in /docs/CustomerMembership.docx for the full requirement. The feature we want to build is a membership for customer that link directly to transaction when the customer is selected and will show the discounted value."
+Dengan begitu AI hanya membaca file relevan dan tidak membaca keseluruhan project dan melebihi konteks yang diinginkan. Tujuan dari proses tersebut agar AI tidak melakukan proses yang namanya map-codebases, di mana AI langsung membaca seluruh file dan folder dan bisa mengakibatkan kelebihan context window dan menghabiskan kuota / limit AI.
+
+17. Model Use
+Untuk menghindari pemborosan usage, disarankan untuk menggunakan model Sonnet sebagai default.
+Untuk task lain yang lebih spesifik:
+- Cheaper Models (Deepseek v4 flash, GLM-5, setara Sonnet / Haiku): Reading files, creating files, updating files, general development seperti coding, code review, refactoring, research, creating todo.
+- Flagship Models (Deepseek v4 Pro, GLM-5.1, setara Opus): Debugging kompleks, masalah concurrency, system wide refactor planning, performance bottleneck analysis, design arsitektur.
+
+18. Standard Bahasa Prompting
+Seluruh prompting kepada AI DISARANKAN menggunakan Bahasa Inggris.
+Alasannya:
+- Model AI memiliki performa terbaik dalam Bahasa Inggris
+- Menghindari ambiguity dalam instruksi teknis
+- Memudahkan dokumentasi dan sharing knowledge
+Tetapi jika sudah menggunakan Bahasa Indonesia, disarankan full Bahasa Indonesia saja.
+
+19. Standar CLAUDE.md / AGENTS.md per Division
+Setiap division engineering WAJIB menyediakan file standar AI guidance bernama CLAUDE.md / AGENTS.md.
+File ini berisi aturan coding khusus untuk stack masing-masing:
+- Laravel
+- Golang
+- Frontend (Next JS / Vue JS)
+- Kotlin / Android
+- Xcode (iOS)
+- Odoo
+AI WAJIB membaca file CLAUDE.md / AGENTS.md terlebih dahulu sebelum implementasi kode.
+Ini bertujuan agar AI mengikuti coding culture perusahaan, bukan standar generik internet.
+Beberapa point wajib yang harus ada pada file tersebut:
+1. Tech stack
+2. Project overview
+3. Code convention
+4. Workflow (rule pada point 15)
+5. Project & Documentation structure
+Point 1–3 biasanya akan di-generate oleh AI saat menjalankan /init pertama kali, tambahkan point 4 dan 5 secara manual atau via AI dengan membaca struktur.
+
+20. API / Secret Key dengan AI
+DILARANG KERAS memasukkan secret key ataupun API key apapun ke dalam prompt atau MD file.
+Wajib pastikan juga file json yang berisi secret seperti env dan google-service json TIDAK ter-commit saat dilakukan git push.

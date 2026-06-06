@@ -1,0 +1,3750 @@
+﻿EssenseLuxe
+Dokumen Spesifikasi — Admin Repository
+Repository: essenseluxe-admin (Laravel Monolith — Blade/SSR)
+
+Tabel 1 — Info Dokumen
+
+Field
+Nilai
+Nomor Dokumen
+EL-ADMIN-SPEC-001
+Nama Dokumen
+EssenseLuxe — Admin Repository Specification
+Versi Dokumen
+v1.0
+Tanggal Terbit
+2026-05-19
+Klasifikasi
+Internal — Jovasoftware
+Batas Protokol Diskusi
+2 / 3 / 5 hari kerja (default guideline)
+
+Tabel 2 — Disetujui Oleh
+
+Peran
+Nama
+Tanda Tangan
+Tanggal
+Project Manager
+_______________
+_______________
+_______________
+Client / PIC
+_______________
+_______________
+_______________
+System Analyst
+_______________
+_______________
+_______________
+Developer — Admin
+_______________
+_______________
+_______________
+
+Tabel 3 — Riwayat Versi Dokumen
+
+Versi
+Tanggal
+Perubahan
+v1.0
+2026-05-19
+Rilis pertama — seluruh 19 modul MVP Admin Repo EssenseLuxe.
+
+File Pendamping Dokumen Ini
+
+File
+Format
+Keterangan
+EssenseLuxe_Admin_Spec_v1.0.docx
+.docx
+Dokumen spesifikasi (file ini)
+EssenseLuxe_Admin_AcceptanceCriteria_v1.0.xlsx
+.xlsx
+Acceptance Criteria — lihat Section 8
+
+Tabel Repository dalam Sistem EssenseLuxe
+
+Repo
+Teknologi
+Tujuan
+Akses DB
+Konsumsi API
+1
+Laravel (API)
+Logika Bisnis, REST API
+Ya
+Tidak
+2 (file ini)
+Laravel (Admin)
+Panel Admin & Master Data
+Ya
+Tidak
+3
+Next.js
+UI Customer — Web
+Tidak
+Repo 1
+
+Peran Dokumen Ini
+
+Dokumen ini mencakup repo essenseluxe-admin — Laravel monolith Blade/SSR yang berperan sebagai panel administrasi internal EssenseLuxe. Repo ini mengakses database server secara langsung (bukan melalui API Repo) dan mengelola seluruh operasi back-office: manajemen produk, stok, pesanan, pembayaran, pengiriman, promosi, user, role, dan otorisasi. Dokumen ini menyertakan ERD database server lengkap di Section 6 atas keputusan eksplisit tim — ERD yang sama juga terdapat di dokumen API Repo (EL-API-SPEC-001). Dokumen ini tidak mencakup UI yang diakses Customer.
+
+Daftar Isi
+
+TOC \h \o &quot;1-3&quot;
+
+2. Gambaran Dokumen
+
+EssenseLuxe Admin Panel adalah antarmuka back-office berbasis web yang dibangun dengan Laravel Blade/SSR. Panel ini digunakan oleh staf internal EssenseLuxe untuk mengelola seluruh operasional platform: mulai dari master data produk hingga konfirmasi pembayaran dan tracking pengiriman.
+
+Sistem otorisasi panel menggunakan RBAC berbasis tabel roles, modules, authorizations, dan authorization_types. Setiap Admin memiliki satu role, dan setiap role memiliki hak akses yang dikonfigurasi per modul dan per tipe aksi (create/read/update/delete). Superadmin adalah role dengan akses penuh yang di-seed langsung.
+
+Admin Repo mengakses database server secara langsung — tidak melalui API Repo. Kedua repo berbagi database yang sama. Schema database didokumentasikan lengkap di Section 6 dokumen ini, dan juga tersedia di dokumen API Repo (EL-API-SPEC-001, Section 6). Jika ada perubahan schema, kedua dokumen harus diperbarui secara bersamaan.
+
+Cakupan MVP v1 mencakup seluruh 19 modul operasional: Autentikasi Admin, Manajemen Role & Otorisasi, Manajemen Admin, Manajemen User, Manajemen Kategori, Manajemen Merek, Manajemen Produk, Manajemen Varian Produk, Manajemen Gudang, Manajemen Stok, Manajemen Promosi, Manajemen Akun Pembayaran, Manajemen Pesanan, Konfirmasi Pembayaran, Manajemen Pengiriman & Tracking, Monitoring Poin Reward, Moderasi Ulasan Produk, File Storage, dan Dashboard.
+
+3. Glossarium
+
+Istilah
+Definisi
+Admin
+Staf internal EssenseLuxe dengan akses ke panel administrasi. Hak aksesnya ditentukan oleh role yang ditetapkan.
+Audit Log
+Catatan aktivitas Admin di panel (siapa, aksi apa, kapan). Lihat Section 7.6 masing-masing modul untuk status audit.
+Authorization
+Hak akses spesifik satu role terhadap satu modul dengan tipe aksi tertentu (create/read/update/delete).
+Blade
+Template engine bawaan Laravel yang merender HTML di sisi server (SSR). Tidak ada rendering client-side React/Vue.
+Controller
+Class Laravel yang menerima HTTP request dari Blade form, menjalankan logika bisnis, dan mengembalikan response/redirect.
+Flash Message
+Pesan notifikasi sementara yang muncul sekali setelah redirect menggunakan Laravel session flash.
+Guard
+Mekanisme Laravel untuk membedakan tipe pengguna yang terautentikasi. Admin menggunakan guard 'admin', Customer menggunakan guard 'web'.
+is_active
+Kolom TINYINT(1) yang menentukan apakah suatu entitas (produk, gudang, promosi, dll.) tampil/aktif di sistem.
+Module Group
+Pengelompokan navigasi panel admin. Setiap Module Group berisi beberapa Modules.
+Override Price
+Harga khusus varian produk selama periode promosi aktif, menggantikan harga normal.
+RBAC
+Role-Based Access Control — sistem kontrol akses berdasarkan role, bukan per-user individual.
+Redirect
+Response HTTP 302 yang mengarahkan browser ke URL lain setelah operasi (Post/Redirect/Get pattern).
+Role
+Kelompok hak akses yang ditetapkan ke satu atau lebih Admin.
+SKU
+Stock Keeping Unit — kode unik setiap varian produk untuk pelacakan stok.
+Slug
+Versi URL-friendly dari nama. Di-generate otomatis dari nama.
+Snapshot
+Data produk/harga yang disalin ke order_items saat checkout untuk menjaga konsistensi historis.
+Soft Delete
+Penghapusan data dengan mengisi kolom deleted_at — data tidak dihapus dari DB, hanya disembunyikan dari query normal.
+SSR
+Server-Side Rendering — HTML di-render penuh di server sebelum dikirim ke browser.
+Superadmin
+Role dengan akses penuh ke seluruh sistem. Di-seed langsung via database seeder.
+Tracking Number
+Nomor resi pengiriman dari kurir yang diinput Admin.
+Warehouse Stock
+Jumlah stok varian produk di gudang tertentu.
+
+4. Inventaris Modul
+
+Format: Admin Repo — Laravel Blade/SSR.
+
+No
+Modul
+Halaman
+Audit Log
+Akses Peran
+Fase
+Est. Effort
+1
+Autentikasi Admin
+2
+Login events
+Semua Admin
+MVP
+1 hari
+2
+Manajemen Role & Otorisasi
+4
+Ya
+Superadmin only
+MVP
+3 hari
+3
+Manajemen Admin
+4
+Ya
+Superadmin only
+MVP
+2 hari
+4
+Manajemen User (Customer)
+3
+Tidak (read-only)
+Admin+
+MVP
+2 hari
+5
+Manajemen Kategori
+3
+Ya
+Admin+
+MVP
+1 hari
+6
+Manajemen Merek
+3
+Ya
+Admin+
+MVP
+1 hari
+7
+Manajemen Produk
+4
+Ya
+Admin+
+MVP
+4 hari
+8
+Manajemen Varian Produk
+3
+Ya
+Admin+
+MVP
+2 hari
+9
+Manajemen Gudang
+3
+Ya
+Admin+
+MVP
+2 hari
+10
+Manajemen Stok
+2
+Ya
+Admin+
+MVP
+2 hari
+11
+Manajemen Promosi
+4
+Ya
+Admin+
+MVP
+3 hari
+12
+Manajemen Akun Pembayaran
+3
+Ya
+Admin+
+MVP
+1 hari
+13
+Manajemen Pesanan
+3
+Tidak (read+status)
+Admin+
+MVP
+3 hari
+14
+Konfirmasi Pembayaran
+2
+Ya
+Admin+
+MVP
+2 hari
+15
+Manajemen Pengiriman
+3
+Ya
+Admin+
+MVP
+3 hari
+16
+Monitoring Poin Reward
+2
+Tidak (read-only)
+Admin+
+MVP
+1 hari
+17
+Moderasi Ulasan Produk
+2
+Ya
+Admin+
+MVP
+1 hari
+18
+File Storage
+1
+Tidak (read-only)
+Admin+
+MVP
+1 hari
+19
+Dashboard
+1
+Tidak (read-only)
+Semua Admin
+MVP
+2 hari
+
+6. ERD / Skema Database (Server)
+
+Catatan: ERD ini diduplikasi dari dokumen API Repo (EL-API-SPEC-001) atas permintaan eksplisit. Jika ada perubahan schema, kedua dokumen harus diperbarui secara bersamaan.
+
+Engine Database: MySQL 8.x — InnoDB engine.
+
+6.1 Konvensi Tipe Data Tim
+Konsep
+Konvensi Tim
+Catatan
+Boolean
+TINYINT(1)
+0 = false, 1 = true
+Enum / status
+ENUM MySQL native
+Nilai exhaustive didaftar di kolom Deskripsi setiap tabel
+Soft Delete
+TIMESTAMP NULL (deleted_at)
+NULL = aktif; berisi timestamp = terhapus. Laravel SoftDeletes.
+Timestamp audit
+TIMESTAMP NULL
+created_at, updated_at, deleted_at — semua TIMESTAMP NULL
+Uang / desimal
+DECIMAL(15,2)
+Untuk harga produk, shipping cost, total order. Dalam IDR.
+Data terstruktur
+Tabel relasi terpisah
+Tidak memakai kolom JSON native. Semua relasi lewat FK.
+Primary Key
+INT UNSIGNED AUTO_INCREMENT
+Sesuai ERD existing. Tidak memakai BIGINT atau UUID.
+Konvensi nama tabel
+snake_case, plural
+Contoh: users, orders, product_variants
+Aturan tambahan
+UNSIGNED untuk semua angka non-negatif (quantity, amount, dll.)
+—
+
+6.2 Diagram Relasi Tabel
+Diagram ERD visual tersedia sebagai file terpisah (erd_e_commerce.pdf) yang disertakan bersama dokumen ini. Berikut adalah dokumentasi detail setiap tabel dalam urutan migrasi.
+
+6.3 Definisi Tabel
+
+module_groups
+Deskripsi: Pengelompokan modul admin untuk navigasi panel. Parent dari tabel modules.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama grup modul (mis. Manajemen Produk)
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+authorization_types
+Deskripsi: Tipe otorisasi yang tersedia (mis. create, read, update, delete). Direferensikan oleh tabel authorizations.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama tipe otorisasi (mis. create, read, update, delete)
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+roles
+Deskripsi: Role yang dapat ditetapkan ke Admin. Mengontrol hak akses ke modul-modul panel admin.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama role (mis. Super Admin, Admin Gudang)
+status
+INT
+Tidak
+IDX
+Status role: 1 = aktif, 0 = nonaktif
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+modules
+Deskripsi: Modul-modul individual yang ada dalam panel admin. Setiap modul berada dalam satu module_group.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+module_group_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → module_groups.id
+name
+VARCHAR(100)
+Tidak
+—
+Nama modul (mis. Manajemen Produk)
+route
+VARCHAR(100)
+Tidak
+—
+Route name Laravel untuk navigasi panel
+order
+INT
+Tidak
+—
+Urutan tampil di navigasi (ascending)
+is_shown
+TINYINT(1)
+Tidak
+—
+1 = tampil di navigasi, 0 = tersembunyi
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK module_group_id → module_groups.id ON DELETE CASCADE
+
+admins
+Deskripsi: Akun staf internal EssenseLuxe yang memiliki akses ke panel admin berdasarkan role yang ditetapkan.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+role_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → roles.id
+name
+VARCHAR(100)
+Tidak
+—
+Nama lengkap admin
+email
+VARCHAR(100)
+Tidak
+UNIQUE
+Email login admin — unik di seluruh tabel
+password
+VARCHAR(100)
+Tidak
+—
+Password ter-hash (bcrypt)
+status
+INT
+Tidak
+IDX
+1 = aktif, 0 = nonaktif
+last_login
+TIMESTAMP
+Ya
+—
+Timestamp login terakhir. NULL jika belum pernah login.
+remember_token
+VARCHAR(100)
+Ya
+—
+Token remember me Sanctum
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK role_id → roles.id. UNIQUE: email.
+
+authorizations
+Deskripsi: Tabel pivot yang mendefinisikan hak akses tiap role terhadap modul tertentu dengan tipe otorisasi spesifik.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+role_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → roles.id
+module_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → modules.id
+authorization_type_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → authorization_types.id
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK role_id → roles.id. FK module_id → modules.id. FK authorization_type_id → authorization_types.id. UNIQUE: (role_id, module_id, authorization_type_id).
+
+users
+Deskripsi: Akun pelanggan (Customer) platform EssenseLuxe.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama lengkap customer
+email
+VARCHAR(100)
+Tidak
+UNIQUE
+Email login customer — unik di seluruh tabel
+phone
+VARCHAR(15)
+Tidak
+—
+Nomor telepon customer
+password
+VARCHAR(100)
+Tidak
+—
+Password ter-hash (bcrypt)
+email_verified_at
+DATETIME
+Ya
+—
+Timestamp verifikasi email. NULL = belum terverifikasi.
+remember_token
+VARCHAR(100)
+Ya
+—
+Token remember me Sanctum
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: UNIQUE: email.
+
+user_points
+Deskripsi: Saldo poin reward aktif milik setiap Customer. Satu record per user.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+user_id
+INT UNSIGNED
+Tidak
+FK, UNIQUE
+FK → users.id. UNIQUE: satu record per user.
+balance
+INT UNSIGNED
+Tidak
+—
+Saldo poin saat ini. Tidak boleh negatif.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK user_id → users.id ON DELETE CASCADE. UNIQUE: user_id.
+Catatan Race Condition: kolom balance rentan race condition jika diupdate konkuren. Gunakan DB::transaction() + lockForUpdate() saat debit/kredit poin.
+
+file_storages
+Deskripsi: Registry file yang diupload ke sistem (gambar produk, bukti pembayaran, thumbnail kategori, dll.).
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+link
+TEXT
+Tidak
+—
+Path relatif atau URL publik file yang disimpan
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+brands
+Deskripsi: Merek produk yang tersedia di platform EssenseLuxe.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama merek
+slug
+VARCHAR(100)
+Tidak
+UNIQUE
+URL-friendly versi nama merek
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: UNIQUE: slug.
+
+categories
+Deskripsi: Kategori produk untuk pengelompokan dan navigasi katalog.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+image
+INT UNSIGNED
+Ya
+FK
+FK → file_storages.id. NULL jika belum ada gambar.
+name
+VARCHAR(100)
+Tidak
+—
+Nama kategori
+slug
+VARCHAR(100)
+Tidak
+UNIQUE
+URL-friendly versi nama kategori
+sort_order
+INT UNSIGNED
+Tidak
+IDX
+Urutan tampil di katalog (ascending)
+is_active
+INT
+Tidak
+IDX
+1 = aktif (tampil di katalog), 0 = nonaktif
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK image → file_storages.id. UNIQUE: slug.
+
+products
+Deskripsi: Data produk utama platform EssenseLuxe. Setiap produk memiliki satu atau lebih varian.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+brand_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → brands.id
+category_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → categories.id
+thumbnail
+INT UNSIGNED
+Ya
+FK
+FK → file_storages.id. Gambar utama produk.
+name
+VARCHAR(100)
+Tidak
+—
+Nama produk
+slug
+VARCHAR(100)
+Tidak
+UNIQUE
+URL-friendly versi nama produk
+description
+TEXT
+Ya
+—
+Deskripsi produk (HTML atau plain text)
+features
+TEXT
+Ya
+—
+Fitur unggulan produk
+gender
+INT
+Tidak
+IDX
+Target gender: 0 = unisex, 1 = pria, 2 = wanita
+is_active
+INT
+Tidak
+IDX
+1 = aktif (tampil di katalog), 0 = nonaktif
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK brand_id → brands.id. FK category_id → categories.id. FK thumbnail → file_storages.id. UNIQUE: slug.
+
+product_images
+Deskripsi: Galeri gambar tambahan untuk produk, selain thumbnail utama.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+product_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → products.id
+path
+INT UNSIGNED
+Tidak
+FK
+FK → file_storages.id
+sort_order
+INT UNSIGNED
+Tidak
+—
+Urutan tampil galeri (ascending)
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK product_id → products.id ON DELETE CASCADE. FK path → file_storages.id.
+
+product_variants
+Deskripsi: Varian spesifik dari sebuah produk (mis. ukuran, warna, kemasan berbeda). Harga dan SKU didefinisikan per varian.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+product_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → products.id
+label
+VARCHAR(100)
+Tidak
+—
+Label varian (mis. 50ml, Ukuran L, Warna Merah)
+price
+DECIMAL(15,2)
+Tidak
+—
+Harga normal varian dalam IDR
+sku
+VARCHAR(45)
+Tidak
+UNIQUE
+Kode SKU unik per varian — unik secara global
+is_active
+INT
+Tidak
+IDX
+1 = aktif (bisa dibeli), 0 = nonaktif
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK product_id → products.id ON DELETE CASCADE. UNIQUE: sku.
+
+warehouses
+Deskripsi: Gudang penyimpanan stok produk. EssenseLuxe dapat memiliki lebih dari satu gudang.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama gudang
+is_active
+INT
+Tidak
+IDX
+1 = aktif (dapat memproses pesanan), 0 = nonaktif
+city
+VARCHAR(100)
+Tidak
+—
+Kota gudang
+province
+VARCHAR(100)
+Tidak
+—
+Provinsi gudang
+postal_code
+VARCHAR(10)
+Tidak
+—
+Kode pos gudang
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+warehouse_stocks
+Deskripsi: Jumlah stok varian produk yang tersedia di gudang tertentu. Satu record per kombinasi warehouse + product_variant.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+warehouse_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → warehouses.id
+product_variant_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → product_variants.id
+quantity
+INT UNSIGNED
+Tidak
+—
+Jumlah stok tersedia. Minimum 0.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK warehouse_id → warehouses.id. FK product_variant_id → product_variants.id. UNIQUE: (warehouse_id, product_variant_id).
+Catatan Race Condition: kolom quantity rentan race condition saat checkout konkuren. Gunakan DB::transaction() + lockForUpdate() saat pengurangan stok.
+
+promotions
+Deskripsi: Promosi atau diskon yang dapat diterapkan ke varian produk tertentu dalam periode waktu tertentu.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+name
+VARCHAR(100)
+Tidak
+—
+Nama promosi
+type
+INT
+Tidak
+IDX
+Tipe promosi: 1 = override harga (price override)
+is_active
+INT
+Tidak
+IDX
+1 = aktif, 0 = nonaktif (manual toggle)
+start_at
+DATETIME
+Tidak
+IDX
+Tanggal dan waktu mulai promosi
+end_at
+DATETIME
+Tidak
+IDX
+Tanggal dan waktu berakhir promosi
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+promotion_items
+Deskripsi: Daftar varian produk yang termasuk dalam suatu promosi beserta harga override-nya.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+promotion_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → promotions.id
+product_variant_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → product_variants.id
+override_price
+DECIMAL(15,2)
+Tidak
+—
+Harga khusus saat promosi aktif, menggantikan price normal
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK promotion_id → promotions.id ON DELETE CASCADE. FK product_variant_id → product_variants.id. UNIQUE: (promotion_id, product_variant_id).
+
+carts
+Deskripsi: Item yang ditambahkan Customer ke keranjang belanja sebelum checkout.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+user_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → users.id
+product_variant_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → product_variants.id
+quantity
+INT UNSIGNED
+Tidak
+—
+Jumlah item di keranjang. Minimum 1.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK user_id → users.id ON DELETE CASCADE. FK product_variant_id → product_variants.id. UNIQUE: (user_id, product_variant_id).
+
+payment_accounts
+Deskripsi: Rekening bank EssenseLuxe yang menjadi tujuan transfer pembayaran oleh Customer.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+bank_name
+VARCHAR(100)
+Tidak
+—
+Nama bank (mis. BCA, BNI, Mandiri)
+account_number
+VARCHAR(100)
+Tidak
+—
+Nomor rekening bank
+account_name
+VARCHAR(100)
+Tidak
+—
+Nama pemilik rekening
+is_active
+INT
+Tidak
+IDX
+1 = aktif (ditampilkan ke Customer), 0 = nonaktif
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+
+orders
+Deskripsi: Pesanan yang dibuat Customer. Menyimpan informasi lengkap transaksi termasuk data pembeli, alamat pengiriman, dan status pesanan.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+user_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → users.id
+warehouse_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → warehouses.id — gudang asal pengiriman
+order_number
+VARCHAR(45)
+Tidak
+UNIQUE
+Nomor pesanan unik yang di-generate sistem
+status
+INT
+Tidak
+IDX
+1=pending, 2=processing, 3=shipped, 4=delivered, 5=cancelled
+subtotal
+DECIMAL(15,2)
+Tidak
+—
+Total harga produk sebelum pengurangan poin dan ongkir
+shipping_cost
+DECIMAL(15,2)
+Tidak
+—
+Biaya pengiriman
+point_redeemed
+INT UNSIGNED
+Tidak
+—
+Jumlah poin yang diredeem. 0 jika tidak memakai poin.
+point_earned
+INT UNSIGNED
+Tidak
+—
+Poin yang akan diberikan setelah pesanan delivered
+total
+DECIMAL(15,2)
+Tidak
+—
+Total akhir = subtotal + shipping_cost - point_redeemed
+buyer_name
+VARCHAR(100)
+Tidak
+—
+Nama pembeli saat checkout (snapshot)
+buyer_email
+VARCHAR(100)
+Tidak
+—
+Email pembeli saat checkout (snapshot)
+buyer_phone
+VARCHAR(20)
+Tidak
+—
+Nomor telepon pembeli saat checkout (snapshot)
+shipping_address
+TEXT
+Tidak
+—
+Alamat pengiriman lengkap (snapshot saat checkout)
+shipping_note
+TEXT
+Ya
+—
+Catatan pengiriman dari Customer. NULL jika tidak ada.
+note
+TEXT
+Ya
+—
+Catatan pesanan internal. NULL jika tidak ada.
+paid_at
+DATETIME
+Ya
+—
+Timestamp pembayaran dikonfirmasi Admin. NULL = belum dibayar.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK user_id → users.id. FK warehouse_id → warehouses.id. UNIQUE: order_number.
+
+order_items
+Deskripsi: Detail item dalam sebuah pesanan. Data produk di-snapshot saat checkout untuk menjaga konsistensi historis.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+order_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → orders.id
+product_variant_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → product_variants.id
+promotion_id
+INT UNSIGNED
+Ya
+FK
+FK → promotions.id. NULL jika tidak ada promosi aktif saat beli.
+product_name
+VARCHAR(100)
+Tidak
+—
+Snapshot nama produk saat checkout
+variant_label
+VARCHAR(100)
+Tidak
+—
+Snapshot label varian saat checkout
+unit_price
+DECIMAL(15,2)
+Tidak
+—
+Harga per unit saat checkout (bisa override price)
+quantity
+INT UNSIGNED
+Tidak
+—
+Jumlah unit yang dibeli
+subtotal
+DECIMAL(15,2)
+Tidak
+—
+unit_price × quantity
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK order_id → orders.id ON DELETE CASCADE. FK product_variant_id → product_variants.id. FK promotion_id → promotions.id (nullable).
+
+payments
+Deskripsi: Bukti pembayaran yang diupload Customer untuk sebuah pesanan. Satu pesanan memiliki satu record pembayaran aktif.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+order_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → orders.id
+payment_account_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → payment_accounts.id — rekening tujuan transfer
+approved_by
+INT UNSIGNED
+Ya
+FK
+FK → admins.id. NULL jika belum disetujui.
+rejected_by
+INT UNSIGNED
+Ya
+FK
+FK → admins.id. NULL jika belum ditolak.
+proof_path
+INT UNSIGNED
+Tidak
+FK
+FK → file_storages.id — bukti transfer
+amount
+DECIMAL(15,2)
+Tidak
+—
+Jumlah yang diklaim Customer ditransfer
+status
+INT
+Tidak
+IDX
+1=pending, 2=approved, 3=rejected
+rejected_reason
+TEXT
+Ya
+—
+Alasan penolakan dari Admin. NULL jika tidak ditolak.
+approved_at
+DATETIME
+Ya
+—
+Timestamp persetujuan Admin. NULL jika belum disetujui.
+rejected_at
+DATETIME
+Ya
+—
+Timestamp penolakan Admin. NULL jika belum ditolak.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK order_id → orders.id. FK payment_account_id → payment_accounts.id. FK approved_by → admins.id (nullable). FK rejected_by → admins.id (nullable). FK proof_path → file_storages.id.
+
+shipments
+Deskripsi: Data pengiriman untuk sebuah pesanan. Dibuat oleh Admin setelah pembayaran dikonfirmasi.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+order_id
+INT UNSIGNED
+Tidak
+FK, UNIQUE
+FK → orders.id. UNIQUE: satu shipment per order.
+warehouse_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → warehouses.id — gudang asal pengiriman
+shipping_cost
+DECIMAL(15,2)
+Tidak
+—
+Biaya pengiriman aktual
+status
+INT
+Tidak
+IDX
+1=preparing, 2=shipped, 3=in_transit, 4=delivered
+courier_name
+VARCHAR(100)
+Tidak
+—
+Nama kurir (mis. JNE, J&T, SiCepat)
+tracking_number
+VARCHAR(100)
+Ya
+—
+Nomor resi pengiriman. NULL sebelum dikirim.
+delivered_at
+DATETIME
+Ya
+—
+Timestamp konfirmasi terima. NULL sebelum delivered.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK order_id → orders.id. FK warehouse_id → warehouses.id. UNIQUE: order_id.
+
+shipment_tracking_logs
+Deskripsi: Log riwayat perubahan status pengiriman. Setiap update status shipment menghasilkan satu baris baru.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+shipment_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → shipments.id
+updated_by
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → admins.id — Admin yang mengupdate status
+status
+INT
+Tidak
+—
+Status baru: 1=preparing, 2=shipped, 3=in_transit, 4=delivered
+note
+TEXT
+Ya
+—
+Catatan update status. NULL jika tidak ada.
+location
+VARCHAR(100)
+Ya
+—
+Lokasi fisik paket saat update. NULL jika tidak tersedia.
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK shipment_id → shipments.id ON DELETE CASCADE. FK updated_by → admins.id.
+
+point_transactions
+Deskripsi: Riwayat mutasi poin reward Customer (masuk/keluar). Setiap perubahan saldo poin harus memiliki record di tabel ini.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+user_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → users.id
+order_id
+INT UNSIGNED
+Ya
+FK
+FK → orders.id. NULL untuk poin adjustment manual.
+type
+INT
+Tidak
+IDX
+1 = credit (poin masuk), 2 = debit (poin keluar/redeem)
+amount
+INT UNSIGNED
+Tidak
+—
+Jumlah poin yang bergerak (selalu positif)
+description
+TEXT
+Tidak
+—
+Keterangan transaksi poin (mis. Poin dari order #EL-001)
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK user_id → users.id ON DELETE CASCADE. FK order_id → orders.id (nullable).
+
+reviews
+Deskripsi: Ulasan produk yang ditulis Customer setelah pesanan delivered. Satu Customer hanya bisa mereview satu varian produk sekali.
+
+Kolom
+Tipe
+Nullable
+Index
+Deskripsi
+id
+INT UNSIGNED
+Tidak
+PK
+Primary key auto-increment
+user_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → users.id
+product_variant_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → product_variants.id
+order_id
+INT UNSIGNED
+Tidak
+FK, IDX
+FK → orders.id — pesanan yang direview
+rating
+INT UNSIGNED
+Tidak
+IDX
+Rating bintang: 1–5
+review
+TEXT
+Ya
+—
+Teks ulasan. NULL jika hanya memberi rating tanpa komentar.
+is_visible
+TINYINT(1)
+Tidak
+IDX
+1 = tampil di halaman produk, 0 = disembunyikan Admin
+created_at
+TIMESTAMP
+Ya
+—
+Timestamp pembuatan record
+updated_at
+TIMESTAMP
+Ya
+—
+Timestamp update terakhir
+deleted_at
+TIMESTAMP
+Ya
+—
+Soft delete — NULL jika aktif
+Constraints: FK user_id → users.id. FK product_variant_id → product_variants.id. FK order_id → orders.id. UNIQUE: (user_id, product_variant_id, order_id).
+
+7. Spesifikasi Fungsional
+
+MODUL 1 — Autentikasi Admin
+
+7.1 Tujuan Modul
+
+Modul ini mengelola proses login dan logout Admin ke panel EssenseLuxe. Admin mengisi form email dan password, sistem memvalidasi via guard 'admin' (tabel admins), dan jika berhasil membuat sesi Laravel. Logout mencabut sesi dan mengarahkan kembali ke halaman login.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin (semua role)
+Login, Logout
+Tidak bisa login jika status = 0 atau soft-deleted.
+Guest
+Lihat halaman login
+Tidak bisa mengakses halaman manapun selain /admin/login sebelum login.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Guest
+Login
+email, password
+Validate → Auth guard admin → Cek status → Buat sesi → Update last_login
+Redirect /admin/dashboard atau tampil error
+Admin
+Logout
+Session (otomatis)
+Invalidate sesi → Regenerate CSRF token
+Redirect /admin/login
+
+7.4 Alur Sistem
+
+Admin membuka /admin/login, mengisi form, dan submit. Controller memvalidasi input lalu memanggil Auth::guard('admin')->attempt(). Jika berhasil, sesi dibuat, last_login diperbarui, lalu redirect ke dashboard. Middleware auth:admin melindungi semua route admin — jika sesi tidak ada, otomatis redirect ke /admin/login. Logout menghancurkan sesi.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Login Admin
+
+Overview:
+Admin mengisi form login. Controller mengautentikasi via guard 'admin'. Jika berhasil, sesi dibuat dan Admin diarahkan ke dashboard.
+
+Step by Step:
+Admin membuka /admin/login (middleware guest:admin — redirect ke dashboard jika sudah login).
+Mengisi email dan password, klik 'Masuk'.
+Controller validasi: email wajib + format valid, password wajib.
+Jika validasi gagal → redirect back dengan errors dan input lama (kecuali password).
+Panggil Auth::guard('admin')->attempt(['email' => $email, 'password' => $password]).
+Jika gagal → redirect back dengan pesan 'Email atau password salah.'
+Jika berhasil, cek status Admin: jika status = 0 → logout paksa, redirect dengan pesan 'Akun Anda tidak aktif.'
+Perbarui last_login di tabel admins dengan timestamp saat ini.
+Regenerasi session token (prevent session fixation).
+Redirect ke /admin/dashboard.
+
+Business Rules:
+Email dicocokkan ke tabel admins — guard 'admin' harus dikonfigurasi di config/auth.php.
+Admin status = 0 tidak bisa login meskipun password benar.
+Admin soft-deleted tidak bisa login (Eloquent SoftDeletes mengecualikannya).
+Rate limiting: 5 percobaan gagal per 15 menit per IP.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Validasi field gagal
+Inline error di bawah field bermasalah
+redirect()->back()->withErrors()->withInput()
+Email/password salah
+Alert merah: 'Email atau password salah.'
+Pesan generik — tidak menyebutkan mana yang salah
+Akun nonaktif
+Alert merah: 'Akun Anda tidak aktif. Hubungi Superadmin.'
+Logout paksa setelah attempt berhasil
+Rate limit
+Alert merah: 'Terlalu banyak percobaan. Coba lagi nanti.'
+HTTP 429 — Laravel throttle
+
+Kesalahan Terbesar:
+Tidak mengonfigurasi guard 'admin' terpisah — Admin dan Customer berbagi sesi.
+Tidak meregenerasi session setelah login — rentan session fixation attack.
+
+7.5.02 — Logout Admin
+
+Overview:
+Admin klik Logout. Controller menghancurkan sesi guard 'admin' dan redirect ke halaman login.
+
+Step by Step:
+Admin klik 'Logout' di navbar (POST request dengan @csrf).
+Auth::guard('admin')->logout().
+$request->session()->invalidate() + regenerateToken().
+Redirect /admin/login dengan flash 'Anda telah logout.'
+
+Business Rules:
+Logout harus POST (bukan GET) untuk mencegah CSRF-logout. Form wajib @csrf.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+CSRF token tidak valid
+Error 419 Page Expired
+Pastikan form logout menyertakan @csrf
+
+Kesalahan Terbesar:
+Menggunakan GET untuk logout — rentan CSRF logout.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Login berhasil mencatat last_login di tabel admins. Login gagal dicatat ke Laravel application log (Log::warning) untuk monitoring keamanan.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Guard autentikasi admin terpisah dari customer?
+Ya — guard 'admin' terpisah menggunakan tabel admins.
+2026-05-19
+API Contract di-skip?
+Ya — Admin Repo akses DB langsung, tidak ada API contract.
+2026-05-19
+
+MODUL 2 — Manajemen Role & Otorisasi
+
+7.1 Tujuan Modul
+
+Superadmin mengelola role dan mengonfigurasi hak akses (authorizations) setiap role terhadap modul panel admin. Setiap authorization mendefinisikan kombinasi role + module + authorization_type yang diizinkan. Perubahan berlaku segera untuk semua Admin dengan role tersebut.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Superadmin
+CRUD Role, atur authorization per role
+Tidak bisa menghapus role yang masih digunakan Admin aktif.
+Admin biasa
+—
+Tidak bisa mengakses modul ini sama sekali.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Superadmin
+Buat Role
+name, status
+Validate → Insert roles
+Redirect list + flash sukses
+Superadmin
+Edit Role
+name, status
+Validate → Update roles
+Redirect list + flash sukses
+Superadmin
+Hapus Role
+role_id
+Cek FK → Soft delete roles
+Redirect list + flash sukses/error
+Superadmin
+Atur Authorization
+role_id, array checkbox module+auth_type
+Hapus auth lama → Insert auth baru (bulk, dalam transaksi)
+Redirect halaman atur auth + flash sukses
+
+7.4 Alur Sistem
+
+Superadmin membuka daftar role, membuat role baru atau mengedit yang ada. Dari detail role, masuk ke halaman 'Atur Otorisasi' yang menampilkan matrix modul vs tipe aksi sebagai checkboxes. Submit mengganti seluruh authorization role tersebut secara atomik dalam satu DB transaction.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat Role
+
+Overview:
+Superadmin membuat role baru. Role baru belum memiliki authorization — harus dikonfigurasi via aksi Atur Authorization.
+
+Step by Step:
+Superadmin membuka /admin/roles/create.
+Mengisi: name (wajib), status (toggle aktif/nonaktif, default aktif).
+Validasi: name wajib, unik di tabel roles, max 100 karakter.
+Insert ke tabel roles. Redirect list + flash 'Role berhasil dibuat.'
+
+Business Rules:
+Nama role harus unik di tabel roles (belum soft-deleted).
+Role baru tanpa authorization — Admin dengan role ini tidak bisa akses modul apapun sampai authorization dikonfigurasi.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Nama role kosong
+Inline error: 'Nama role wajib diisi.'
+required
+Nama role duplikat
+Inline error: 'Nama role sudah digunakan.'
+unique:roles,name
+
+Kesalahan Terbesar:
+Tidak membatasi akses hanya Superadmin — middleware 'role:superadmin' wajib dipasang.
+
+7.5.02 — Atur Authorization Role
+
+Overview:
+Halaman matrix modul vs tipe aksi dalam checkbox. Superadmin mencentang kombinasi yang diizinkan, submit. Sistem mengganti seluruh authorization role secara atomik.
+
+Step by Step:
+Superadmin membuka /admin/roles/{id}/authorizations.
+Sistem tampilkan matrix: baris = modul (dari tabel modules), kolom = tipe otorisasi (dari tabel authorization_types). Checkbox yang aktif di-pre-check.
+Superadmin ubah centang, klik 'Simpan'.
+Dalam DB::transaction(): hapus semua authorizations lama untuk role_id ini → insert batch baru.
+Redirect halaman yang sama + flash 'Otorisasi berhasil disimpan.'
+
+Business Rules:
+Penggantian authorization dilakukan atomik dalam satu DB transaction.
+Jika tidak ada checkbox dicentang, semua authorization role dihapus.
+Perubahan berlaku segera untuk Admin aktif dengan role tersebut.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Role tidak ditemukan
+Halaman 404
+Route model binding
+Transaksi DB gagal
+Flash error: 'Gagal menyimpan otorisasi. Coba lagi.'
+try-catch di DB::transaction(), rollback otomatis
+
+Kesalahan Terbesar:
+Tidak menggunakan DB transaction — partial update menyebabkan authorization yang tidak konsisten.
+
+7.5.03 — Hapus Role
+
+Overview:
+Superadmin menghapus role yang tidak digunakan. Sistem cek FK ke admins aktif sebelum soft delete.
+
+Step by Step:
+Superadmin klik 'Hapus' → konfirmasi modal.
+Controller cek: ada Admin aktif (deleted_at IS NULL) dengan role ini?
+Jika ada → flash error 'Role masih digunakan oleh X admin.'
+Jika tidak ada → soft delete roles. Redirect list + flash sukses.
+
+Business Rules:
+Role yang masih digunakan Admin aktif tidak bisa dihapus.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Role masih digunakan
+Flash error dengan jumlah admin terdampak
+COUNT admins WHERE role_id = ? AND deleted_at IS NULL
+Role tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Menghapus role tanpa cek FK — Admin yang role-nya dihapus kehilangan akses tanpa peringatan.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap perubahan authorization dicatat ke application log dengan Superadmin yang melakukan dan role yang diubah.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Authorization menggunakan tabel yang sama dengan API Repo?
+Ya, tabel roles, modules, authorizations, authorization_types sama persis.
+2026-05-19
+
+MODUL 3 — Manajemen Admin
+
+7.1 Tujuan Modul
+
+Superadmin membuat, mengedit, dan menonaktifkan akun Admin. Superadmin menetapkan role untuk setiap Admin. Pembuatan akun Admin tidak memerlukan verifikasi email — akun langsung aktif.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Superadmin
+CRUD Admin, ubah role, ubah status
+Tidak bisa menghapus/mengedit akun Superadmin lain via form ini.
+Admin biasa
+—
+Tidak bisa mengakses modul ini.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Superadmin
+Buat Admin
+name, email, password, role_id, status
+Validate → Hash pw → Insert admins
+Redirect list + flash sukses
+Superadmin
+Edit Admin
+name, email, role_id, status
+Validate → Update admins
+Redirect list + flash sukses
+Superadmin
+Reset Password
+password baru
+Validate → Hash → Update admins
+Redirect detail + flash sukses
+Superadmin
+Hapus Admin
+admin_id
+Cek bukan diri sendiri → Soft delete
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Superadmin membuka daftar Admin, melihat nama, email, role, status, dan last_login. Membuat Admin baru dengan memilih role aktif yang ada. Edit mengubah nama, email, role, status — password diubah via aksi terpisah 'Reset Password'. Menonaktifkan Admin (status=0) segera mencegah login.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat Admin
+
+Overview:
+Superadmin mengisi form Admin baru. Akun langsung aktif tanpa verifikasi email.
+
+Step by Step:
+Superadmin membuka /admin/admins/create.
+Mengisi: name, email (unik), password, password_confirmation, role_id (dropdown roles aktif), status (default: aktif).
+Validasi: semua field wajib, email unik di admins, password min 8 karakter, password_confirmation cocok.
+Jika validasi gagal → redirect back dengan errors (kecuali field password).
+Hash password dengan bcrypt. Insert ke tabel admins.
+Redirect /admin/admins + flash 'Admin berhasil dibuat.'
+
+Business Rules:
+Email harus unik di tabel admins.
+Password di-hash dengan bcrypt — tidak pernah disimpan plain text.
+Role yang dipilih harus ada dan aktif (status=1) di tabel roles.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Email duplikat
+Inline error: 'Email sudah digunakan.'
+unique:admins,email
+Password tidak cocok
+Inline error di password_confirmation
+confirmed
+Role tidak valid
+Inline error: 'Role tidak ditemukan.'
+exists:roles,id
+
+Kesalahan Terbesar:
+Menyimpan password tanpa hash — selalu gunakan Hash::make().
+
+7.5.02 — Edit Admin
+
+Overview:
+Superadmin mengubah nama, email, role, atau status Admin. Password tidak diubah di form ini.
+
+Step by Step:
+Superadmin membuka /admin/admins/{id}/edit.
+Form pre-filled data Admin saat ini.
+Validasi: name wajib, email unik kecuali milik Admin ini (ignore:{id}), role_id valid.
+Update record di admins.
+Jika status diubah ke 0 → Admin tersebut tidak bisa login lagi segera.
+Redirect list + flash sukses.
+
+Business Rules:
+Menonaktifkan Admin (status=0) berlaku segera — sesi aktif berakhir pada request berikutnya.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Email duplikat dengan Admin lain
+Inline error: 'Email sudah digunakan.'
+unique:admins,email,{id}
+Admin tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Validasi email unique tanpa ignore ID — Admin tidak bisa menyimpan emailnya sendiri yang tidak berubah.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Pembuatan dan penghapusan Admin dicatat ke application log beserta Superadmin yang melakukan.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah pembuatan Admin perlu verifikasi email?
+Tidak — akun langsung aktif setelah dibuat Superadmin.
+2026-05-19
+
+MODUL 4 — Manajemen User (Customer)
+
+7.1 Tujuan Modul
+
+Admin melihat daftar dan detail akun Customer. Admin dapat menonaktifkan Customer yang melanggar ketentuan. Modul ini bersifat read-heavy — Admin tidak bisa membuat atau mengubah data pribadi Customer.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat list, lihat detail, nonaktifkan Customer
+Tidak bisa membuat akun Customer baru atau mengubah email/password Customer.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat List Customer
+Filter (nama, email, status)
+Query users + pagination
+Tabel daftar Customer
+Admin
+Lihat Detail Customer
+user_id
+Query users + relasi orders, points
+Halaman detail Customer
+Admin
+Nonaktifkan Customer
+user_id
+Soft delete users
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuka /admin/users dan melihat daftar Customer dengan filter pencarian. Klik nama Customer untuk detail: profil, riwayat pesanan, saldo poin. Tombol 'Nonaktifkan' melakukan soft delete — Customer tidak bisa login lagi.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Lihat List & Detail Customer
+
+Overview:
+Admin melihat daftar Customer dengan pencarian. Detail Customer menampilkan profil, saldo poin, dan ringkasan pesanan.
+
+Step by Step:
+Admin membuka /admin/users. Query tabel users dengan pagination 15 per halaman.
+Admin filter ?search= berdasarkan nama atau email.
+Klik Customer → /admin/users/{id}. Load Customer dengan relasi user_points dan jumlah orders.
+Tampilkan: nama, email, telepon, status verifikasi email, saldo poin, total pesanan, tanggal daftar.
+
+Business Rules:
+Query menggunakan SoftDeletes — Customer soft-deleted tidak muncul di list default.
+Data Customer hanya dibaca — tidak ada form edit profil di panel admin.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Customer tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Tidak memasang pagination — tabel users bisa sangat besar, query tanpa limit menyebabkan timeout.
+
+7.6 Kebutuhan Audit / Logging
+
+TIDAK DIPERLUKAN — Modul ini read-only kecuali aksi nonaktifkan yang dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah Admin bisa mengubah data Customer?
+Tidak — Admin hanya bisa melihat dan menonaktifkan.
+2026-05-19
+
+MODUL 5 — Manajemen Kategori
+
+7.1 Tujuan Modul
+
+Admin mengelola kategori produk yang ditampilkan di katalog EssenseLuxe. Setiap kategori memiliki nama, slug (auto-generate), gambar opsional, urutan tampil, dan status aktif/nonaktif.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Kategori, toggle status aktif
+Tidak bisa menghapus kategori yang masih memiliki produk aktif.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Kategori
+name, image (opsional), sort_order, is_active
+Validate → Upload file → Insert categories
+Redirect list + flash sukses
+Admin
+Edit Kategori
+name, image, sort_order, is_active
+Validate → Update categories
+Redirect list + flash sukses
+Admin
+Hapus Kategori
+category_id
+Cek produk aktif → Soft delete
+Redirect list + flash sukses/error
+
+7.4 Alur Sistem
+
+Admin membuka daftar kategori dengan urutan tampil, status aktif, dan jumlah produk per kategori. Gambar kategori diupload ke storage dan ID-nya FK ke file_storages. Slug auto-generate dari nama.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat & Edit Kategori
+
+Overview:
+Admin mengisi form kategori. Slug auto-generate dari nama. Gambar diupload ke storage dan di-register ke file_storages.
+
+Step by Step:
+Admin membuka /admin/categories/create (atau /edit).
+Mengisi: name, gambar (file opsional, max 2MB, jpg/png/webp), sort_order, is_active.
+Jika ada file gambar: simpan ke storage/public/categories/, insert ke file_storages, ambil ID.
+Generate slug unik dari name via Str::slug(). Jika duplikat, tambah suffix.
+Insert/update tabel categories. Redirect list + flash sukses.
+
+Business Rules:
+Slug harus unik di tabel categories.
+sort_order menentukan urutan tampil di frontend.
+Gambar lama dihapus dari storage jika diganti gambar baru.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Nama kosong
+Inline error: 'Nama kategori wajib diisi.'
+required
+Format file tidak valid
+Inline error: 'Format gambar harus jpg, png, atau webp.'
+mimes:jpg,png,webp
+File terlalu besar
+Inline error: 'Ukuran gambar maksimal 2MB.'
+max:2048
+
+Kesalahan Terbesar:
+Tidak menghapus file lama saat gambar diganti — storage penuh dengan file orphan.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: CRUD kategori dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah kategori mendukung hierarki?
+Tidak di MVP v1 — kategori flat satu level.
+2026-05-19
+
+MODUL 6 — Manajemen Merek (Brand)
+
+7.1 Tujuan Modul
+
+Admin mengelola merek produk. Setiap merek memiliki nama dan slug auto-generated. Merek digunakan sebagai filter di halaman katalog Customer.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Merek
+Tidak bisa menghapus merek yang masih memiliki produk aktif.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Merek
+name
+Validate → Generate slug → Insert brands
+Redirect list + flash sukses
+Admin
+Edit Merek
+name
+Validate → Update brands
+Redirect list + flash sukses
+Admin
+Hapus Merek
+brand_id
+Cek produk aktif → Soft delete brands
+Redirect list + flash sukses/error
+
+7.4 Alur Sistem
+
+Admin membuka daftar merek dengan nama dan jumlah produk per merek. Form buat/edit sederhana (nama saja — slug auto-generate). Hapus merek hanya bisa jika tidak ada produk aktif yang menggunakan merek tersebut.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat, Edit & Hapus Merek
+
+Overview:
+CRUD standar untuk data merek. Slug auto-generate dari nama. Penghapusan diblokir jika merek masih digunakan produk aktif.
+
+Step by Step (Buat):
+Admin mengisi name di /admin/brands/create.
+Validasi: name wajib, unik di brands, max 100 karakter.
+Generate slug unik. Insert ke brands. Redirect list + flash sukses.
+
+Step by Step (Hapus):
+Admin klik 'Hapus' → konfirmasi modal.
+Cek: ada produk aktif (deleted_at IS NULL) dengan brand_id ini?
+Jika ada → flash error 'Merek masih digunakan oleh produk aktif.'
+Jika tidak ada → soft delete. Redirect list + flash sukses.
+
+Business Rules:
+Nama dan slug merek harus unik di tabel brands.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Nama duplikat
+Inline error: 'Nama merek sudah digunakan.'
+unique:brands,name
+Merek digunakan produk
+Flash error: 'Merek masih digunakan oleh produk aktif.'
+Cek FK products sebelum delete
+
+Kesalahan Terbesar:
+Menghapus merek tanpa cek FK ke products — menyebabkan orphan data produk.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: CRUD merek dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah merek memiliki logo?
+Tidak di MVP v1 — hanya nama dan slug.
+2026-05-19
+
+MODUL 7 — Manajemen Produk
+
+7.1 Tujuan Modul
+
+Admin mengelola data produk utama. Admin dapat membuat produk baru, mengedit informasi, mengelola galeri gambar, dan mengaktifkan/menonaktifkan produk. Setiap produk memiliki minimal satu varian yang dikelola di Modul 8.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Produk, upload thumbnail & galeri, toggle status aktif
+Tidak bisa menghapus produk yang memiliki order_items aktif (historis pesanan).
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Produk
+name, brand_id, category_id, thumbnail, description, features, gender, is_active
+Validate → Upload thumbnail → Insert products + product_images
+Redirect detail produk + flash sukses
+Admin
+Edit Produk
+field yang diubah
+Validate → Update products
+Redirect detail + flash sukses
+Admin
+Hapus Produk
+product_id
+Cek order_items → Soft delete products
+Redirect list + flash sukses/error
+Admin
+Toggle Status
+product_id
+Toggle is_active → Update products
+Redirect list + flash sukses
+Admin
+Kelola Galeri
+product_id, array gambar
+Upload file → Insert/delete product_images
+Reload halaman galeri + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuka daftar produk dengan filter kategori, merek, dan status. Membuat produk baru via form tunggal. Setelah produk dibuat, Admin menambahkan galeri gambar tambahan dan varian via modul terpisah (Modul 8). Toggle status aktif langsung dari daftar produk.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat Produk
+
+Overview:
+Admin mengisi form produk dengan informasi dasar termasuk thumbnail utama. Setelah produk dibuat, diarahkan ke halaman detail untuk menambah galeri dan varian.
+
+Step by Step:
+Admin membuka /admin/products/create.
+Mengisi: name, brand_id, category_id, thumbnail (file, wajib, max 2MB, jpg/png/webp), description, features, gender (0=Unisex/1=Pria/2=Wanita), is_active.
+Upload thumbnail → simpan ke storage → insert ke file_storages → ambil ID.
+Generate slug unik dari name. Insert ke products.
+Redirect /admin/products/{id} + flash 'Produk berhasil dibuat. Silakan tambahkan varian dan galeri.'
+
+Business Rules:
+Slug harus unik di tabel products.
+brand_id dan category_id harus valid (tidak soft-deleted).
+Produk baru is_active=1 tetap tidak muncul di katalog jika belum memiliki varian aktif.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Thumbnail tidak diupload
+Inline error: 'Thumbnail wajib diunggah.'
+required untuk create
+Brand tidak valid
+Inline error: 'Merek tidak ditemukan.'
+exists:brands,id
+Kategori tidak valid
+Inline error: 'Kategori tidak ditemukan.'
+exists:categories,id
+
+Kesalahan Terbesar:
+Menyimpan produk tanpa memastikan ada setidaknya satu varian — produk tidak bisa dibeli.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: CRUD produk dicatat ke application log dengan nama produk dan Admin yang melakukan.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah produk mendukung multi-kategori?
+Tidak — satu produk satu kategori sesuai ERD.
+2026-05-19
+
+MODUL 8 — Manajemen Varian Produk
+
+7.1 Tujuan Modul
+
+Admin mengelola varian dari sebuah produk — setiap varian memiliki label, harga, SKU unik, dan status aktif. Stok per varian dikelola terpisah di Modul 10. Setiap produk harus memiliki minimal satu varian aktif agar bisa dibeli Customer.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Varian per produk, toggle status aktif
+Tidak bisa menghapus varian yang memiliki historis order_items. SKU harus unik secara global.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Varian
+product_id, label, price, sku, is_active
+Validate → Insert product_variants
+Redirect detail produk + flash sukses
+Admin
+Edit Varian
+label, price, sku, is_active
+Validate → Update product_variants
+Redirect detail produk + flash sukses
+Admin
+Hapus Varian
+variant_id
+Cek order_items → Soft delete
+Redirect detail produk + flash sukses/error
+
+7.4 Alur Sistem
+
+Manajemen varian diakses dari halaman detail produk. Admin melihat daftar varian, menambah varian baru, mengedit, atau menghapus. Varian baru otomatis stok 0 di semua gudang — stok harus diisi manual via Modul 10.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat & Edit Varian
+
+Overview:
+Admin menambahkan varian baru atau mengedit varian yang ada. SKU harus unik secara global di seluruh tabel product_variants.
+
+Step by Step (Buat):
+Admin di halaman detail produk /admin/products/{id}, klik 'Tambah Varian'.
+Mengisi: label, price (desimal positif), sku (unik global), is_active.
+Validasi: semua field wajib, price > 0, sku unik di product_variants.
+Insert ke product_variants dengan product_id dari route.
+Redirect kembali ke halaman detail produk + flash sukses.
+
+Business Rules:
+SKU harus unik secara global di tabel product_variants — bukan hanya per produk.
+Price harus lebih dari 0.
+Varian baru tidak otomatis memiliki stok — Admin harus input via Modul 10.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+SKU duplikat
+Inline error: 'SKU sudah digunakan.'
+unique:product_variants,sku
+Price tidak valid
+Inline error: 'Harga harus lebih dari 0.'
+numeric|min:0.01
+Label kosong
+Inline error: 'Label varian wajib diisi.'
+required
+
+Kesalahan Terbesar:
+Validasi SKU unique hanya per produk — menyebabkan SKU duplikat antar produk.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Perubahan harga varian dicatat ke application log — penting untuk audit harga historis.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah varian mendukung gambar terpisah?
+Tidak di MVP v1 — galeri gambar di level produk.
+2026-05-19
+
+MODUL 9 — Manajemen Gudang
+
+7.1 Tujuan Modul
+
+Admin mengelola data gudang penyimpanan stok EssenseLuxe. Gudang yang nonaktif tidak dapat digunakan untuk memproses pesanan baru.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Gudang, toggle status aktif
+Tidak bisa menghapus gudang yang masih memiliki stok aktif atau pesanan aktif.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Gudang
+name, is_active, city, province, postal_code
+Validate → Insert warehouses
+Redirect list + flash sukses
+Admin
+Edit Gudang
+name, is_active, city, province, postal_code
+Validate → Update warehouses
+Redirect list + flash sukses
+Admin
+Hapus Gudang
+warehouse_id
+Cek stok/order → Soft delete
+Redirect list + flash sukses/error
+
+7.4 Alur Sistem
+
+Admin membuka daftar gudang dengan nama, lokasi, status, dan total SKU yang tersimpan. Gudang yang dihapus harus stok nol dan tidak ada pesanan pending yang berasal dari gudang tersebut.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat, Edit & Hapus Gudang
+
+Overview:
+CRUD standar untuk data gudang. Penghapusan diblokir jika gudang masih memiliki stok atau pesanan aktif.
+
+Step by Step (Hapus):
+Admin klik 'Hapus' → konfirmasi modal.
+Cek: ada warehouse_stocks dengan warehouse_id ini dan quantity > 0?
+Cek: ada orders dengan warehouse_id ini dan status != cancelled?
+Jika ada kondisi di atas → flash error 'Gudang tidak bisa dihapus karena masih memiliki stok atau pesanan aktif.'
+Jika aman → soft delete. Redirect + flash sukses.
+
+Business Rules:
+Gudang nonaktif (is_active=0) tidak bisa dipilih untuk pesanan baru.
+Penghapusan memerlukan stok nol dan tidak ada pesanan aktif.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Gudang masih digunakan
+Flash error dengan penjelasan alasan
+Cek warehouse_stocks dan orders sebelum delete
+Kode pos tidak valid
+Inline error: 'Format kode pos tidak valid.'
+digits:5
+
+Kesalahan Terbesar:
+Menghapus gudang dengan stok aktif — menyebabkan warehouse_stocks orphan.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Perubahan status gudang dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah satu pesanan bisa dari beberapa gudang?
+Tidak di MVP v1 — satu pesanan dari satu gudang sesuai ERD.
+2026-05-19
+
+MODUL 10 — Manajemen Stok
+
+7.1 Tujuan Modul
+
+Admin melihat dan mengatur jumlah stok setiap varian produk di setiap gudang. Stok dikelola per kombinasi warehouse + product_variant. Admin dapat menginput stok awal atau melakukan penyesuaian stok manual.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat stok, input/adjust stok per gudang
+Tidak bisa mengurangi stok di bawah 0. Perubahan stok harus menggunakan DB transaction.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat Stok
+Filter gudang, produk
+Query warehouse_stocks + join
+Tabel stok per varian per gudang
+Admin
+Set/Adjust Stok
+warehouse_id, variant_id, qty
+Validate → Update warehouse_stocks (upsert dalam transaksi)
+Redirect/reload + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuka /admin/stocks dan melihat tabel stok per varian per gudang. Filter berdasarkan gudang atau nama produk/varian. Klik 'Set Stok' membuka form input quantity baru. Controller menggunakan upsert dalam DB transaction.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Set / Adjust Stok
+
+Overview:
+Admin menginput jumlah stok aktual untuk kombinasi gudang + varian. Sistem melakukan upsert pada warehouse_stocks dalam transaksi DB.
+
+Step by Step:
+Admin memilih gudang dan varian, klik 'Set Stok'.
+Mengisi quantity (integer >= 0).
+Validasi: quantity wajib, integer, min 0.
+Dalam DB::transaction(): updateOrCreate warehouse_stocks berdasarkan (warehouse_id, product_variant_id).
+Redirect + flash 'Stok berhasil diperbarui.'
+
+Business Rules:
+Quantity tidak boleh negatif — minimum 0.
+Upsert dilakukan dalam DB transaction untuk mencegah race condition dengan proses checkout.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Quantity negatif
+Inline error: 'Stok tidak boleh negatif.'
+min:0
+Quantity bukan angka
+Inline error: 'Stok harus berupa angka.'
+integer
+
+Kesalahan Terbesar:
+Update stok tanpa DB transaction — jika concurrent dengan checkout, bisa terjadi negative stock.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap perubahan stok manual dicatat ke application log dengan nilai sebelum dan sesudah serta Admin yang melakukan.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah ada fitur stock transfer antar gudang?
+Tidak di MVP v1 — stok diatur manual per gudang.
+2026-05-19
+
+MODUL 11 — Manajemen Promosi
+
+7.1 Tujuan Modul
+
+Admin membuat dan mengelola promosi yang memberikan harga override pada varian produk tertentu selama periode waktu yang ditentukan. Harga promosi menggantikan harga normal varian selama promosi aktif dan dalam periode berlaku.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Promosi, kelola item promosi, toggle status aktif
+Override price harus lebih kecil dari harga normal varian. Periode promosi tidak boleh overlap untuk varian yang sama.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Promosi
+name, type, is_active, start_at, end_at
+Validate → Insert promotions
+Redirect detail promosi + flash sukses
+Admin
+Tambah Item Promosi
+promotion_id, product_variant_id, override_price
+Validate → Insert promotion_items
+Reload halaman detail + flash sukses
+Admin
+Edit Promosi
+name, type, is_active, start_at, end_at
+Validate → Update promotions
+Redirect detail + flash sukses
+Admin
+Hapus Promosi
+promotion_id
+Soft delete promotions + items
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuat promosi dengan periode tanggal dan status aktif. Setelah dibuat, Admin masuk ke halaman detail untuk menambahkan varian produk beserta override price. Di frontend Customer, sistem otomatis menampilkan harga promosi jika ada promosi aktif (is_active=1 dan start_at <= now <= end_at).
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat Promosi & Tambah Item
+
+Overview:
+Admin membuat header promosi (nama, periode, tipe) lalu menambahkan varian produk satu per satu dengan harga override masing-masing.
+
+Step by Step (Buat Promosi):
+Admin membuka /admin/promotions/create.
+Mengisi: name, type (saat ini hanya 1 = price override), is_active, start_at, end_at.
+Validasi: name wajib, start_at < end_at.
+Insert ke promotions. Redirect /admin/promotions/{id}.
+
+Step by Step (Tambah Item):
+Di halaman detail promosi, Admin pilih product_variant dan isi override_price.
+Validasi: override_price > 0, varian belum ada dalam promosi ini, override_price < harga normal varian.
+Insert ke promotion_items. Reload halaman + flash sukses.
+
+Business Rules:
+override_price harus lebih kecil dari harga normal varian (price di product_variants).
+Satu varian tidak bisa masuk dua kali dalam promosi yang sama.
+Promosi berlaku jika: is_active = 1 DAN start_at <= NOW() <= end_at.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+end_at sebelum start_at
+Inline error: 'Tanggal berakhir harus setelah tanggal mulai.'
+after:start_at
+override_price >= harga normal
+Inline error: 'Harga promo harus lebih kecil dari harga normal.'
+Custom validation di Controller
+Varian duplikat di promosi
+Inline error: 'Varian ini sudah ada dalam promosi.'
+unique check promotion_items
+
+Kesalahan Terbesar:
+Tidak memvalidasi override_price < harga normal — promosi bisa menetapkan harga yang lebih mahal.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Aktivasi dan nonaktifasi promosi dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah satu varian bisa masuk lebih dari satu promosi aktif bersamaan?
+Tidak direkomendasikan — perlu validasi overlap di MVP.
+2026-05-19
+
+MODUL 12 — Manajemen Akun Pembayaran
+
+7.1 Tujuan Modul
+
+Admin mengelola rekening bank EssenseLuxe yang ditampilkan ke Customer sebagai tujuan transfer pembayaran. Customer memilih salah satu rekening aktif saat checkout.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+CRUD Akun Pembayaran, toggle status aktif
+Minimal satu akun pembayaran harus tetap aktif agar Customer bisa checkout.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Akun
+bank_name, account_number, account_name, is_active
+Validate → Insert payment_accounts
+Redirect list + flash sukses
+Admin
+Edit Akun
+bank_name, account_number, account_name, is_active
+Validate → Update payment_accounts
+Redirect list + flash sukses
+Admin
+Hapus Akun
+account_id
+Cek payments aktif → Soft delete
+Redirect list + flash sukses/error
+
+7.4 Alur Sistem
+
+Admin mengelola daftar rekening bank dari /admin/payment-accounts. Rekening aktif ditampilkan ke Customer saat checkout. Rekening yang sudah digunakan dalam payments tidak bisa dihapus.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat, Edit & Hapus Akun Pembayaran
+
+Overview:
+CRUD standar untuk rekening bank. Penghapusan diblokir jika rekening masih direferensikan oleh record payments.
+
+Step by Step:
+Form buat/edit: bank_name, account_number, account_name, is_active. Semua field wajib, max 100 karakter.
+Insert/update ke payment_accounts.
+Hapus: cek payments yang merujuk ke akun ini. Jika ada → flash error. Jika tidak → soft delete.
+
+Business Rules:
+Tidak ada rekening aktif = Customer tidak bisa upload bukti bayar.
+Rekening yang sudah digunakan dalam payments tidak bisa dihapus.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Rekening digunakan payments
+Flash error: 'Rekening masih digunakan dalam data pembayaran.'
+Cek FK payments.payment_account_id
+
+Kesalahan Terbesar:
+Menonaktifkan semua rekening sekaligus — Customer tidak bisa melanjutkan checkout.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Perubahan rekening bank dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah mendukung payment gateway otomatis?
+Tidak di MVP v1 — hanya transfer manual.
+2026-05-19
+
+MODUL 13 — Manajemen Pesanan
+
+7.1 Tujuan Modul
+
+Admin memantau dan mengelola seluruh pesanan Customer. Admin dapat melihat daftar pesanan dengan filter status, melihat detail pesanan, dan membatalkan pesanan. Pembatalan mengembalikan stok ke gudang.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat list, lihat detail, batalkan pesanan
+Tidak bisa mengubah data items atau harga pesanan. Pembatalan hanya untuk status pending atau processing.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat List Pesanan
+Filter status, tanggal, search order_number
+Query orders + pagination
+Tabel daftar pesanan
+Admin
+Lihat Detail Pesanan
+order_id
+Query orders + items + payment + shipment
+Halaman detail lengkap
+Admin
+Batalkan Pesanan
+order_id
+Validate → Update status=cancelled → Kembalikan stok + poin
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Alur status pesanan: pending → processing (setelah pembayaran dikonfirmasi) → shipped → delivered. Admin dapat membatalkan pesanan hanya dalam status pending atau processing. Pembatalan mengembalikan stok varian ke warehouse_stocks dan poin yang diredeem kembali ke Customer.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Lihat Detail Pesanan
+
+Overview:
+Admin melihat informasi lengkap satu pesanan: data pembeli snapshot, daftar item, subtotal, ongkir, poin, total, status pembayaran, dan status pengiriman.
+
+Step by Step:
+Admin membuka /admin/orders/{id}.
+Load pesanan dengan relasi: order_items, payment, shipment.
+Data produk diambil dari kolom snapshot di order_items (product_name, variant_label, unit_price).
+
+Business Rules:
+Data produk di order_items diambil dari kolom snapshot — bukan dari tabel products saat ini.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Pesanan tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Join ke tabel products untuk nama produk historis — harus gunakan kolom snapshot di order_items.
+
+7.5.02 — Batalkan Pesanan
+
+Overview:
+Admin membatalkan pesanan pending atau processing. Stok dikembalikan ke gudang dan poin yang diredeem dikembalikan ke Customer.
+
+Step by Step:
+Admin klik 'Batalkan Pesanan' → konfirmasi modal.
+Cek status pesanan: hanya pending atau processing yang bisa dibatalkan.
+Dalam DB::transaction():
+  a. Update orders.status = cancelled.
+  b. Kembalikan quantity setiap order_item ke warehouse_stocks (lockForUpdate).
+  c. Jika point_redeemed > 0: kembalikan poin ke user_points, insert credit ke point_transactions.
+Redirect /admin/orders + flash 'Pesanan berhasil dibatalkan.'
+
+Business Rules:
+Hanya pesanan pending atau processing yang bisa dibatalkan.
+Seluruh operasi dalam satu DB transaction.
+Pengembalian stok menggunakan lockForUpdate() untuk mencegah race condition.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Status tidak valid untuk batal
+Flash error: 'Pesanan tidak dapat dibatalkan pada status ini.'
+Cek status sebelum proses
+Transaksi DB gagal
+Flash error: 'Gagal membatalkan pesanan. Coba lagi.'
+try-catch di DB::transaction()
+
+Kesalahan Terbesar:
+Tidak menggunakan DB transaction saat membatalkan — stok tidak kembali jika transaksi gagal di tengah.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap perubahan status pesanan dicatat ke application log dengan status sebelum/sesudah.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah Admin bisa mengubah item atau harga pesanan?
+Tidak — pesanan yang sudah dibuat tidak bisa diubah isinya.
+2026-05-19
+
+MODUL 14 — Konfirmasi Pembayaran
+
+7.1 Tujuan Modul
+
+Admin meninjau bukti transfer yang diupload Customer dan memutuskan untuk menyetujui atau menolak. Persetujuan otomatis memajukan status pesanan ke processing. Penolakan mengembalikan pesanan ke pending agar Customer bisa upload ulang.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat daftar pembayaran pending, approve, reject
+Tidak bisa mengubah jumlah pembayaran atau rekening tujuan setelah Customer submit.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat Daftar Pembayaran
+Filter status
+Query payments + orders
+Tabel daftar pembayaran
+Admin
+Approve Pembayaran
+payment_id
+Update payment=approved → Update order=processing → Set paid_at
+Redirect list + flash sukses
+Admin
+Reject Pembayaran
+payment_id, rejected_reason
+Update payment=rejected → Catat rejected_by + rejected_at
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuka daftar pembayaran pending. Melihat bukti transfer. Approve → otomatis update status pesanan ke processing dan isi paid_at. Reject → Admin wajib isi alasan; pesanan tetap pending sehingga Customer bisa upload ulang.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Approve Pembayaran
+
+Overview:
+Admin mengonfirmasi bukti transfer valid. Sistem memperbarui status payment dan order secara atomik, mencatat Admin yang menyetujui dan waktu persetujuan.
+
+Step by Step:
+Admin melihat bukti transfer di halaman detail payment.
+Klik 'Setujui Pembayaran' → konfirmasi modal.
+Dalam DB::transaction():
+  a. Update payments: status=approved, approved_by=auth()->guard('admin')->id(), approved_at=now().
+  b. Update orders: status=processing, paid_at=now().
+Redirect /admin/payments + flash 'Pembayaran berhasil dikonfirmasi.'
+
+Business Rules:
+Hanya payment berstatus pending yang bisa di-approve.
+approved_by harus diisi dengan ID Admin yang sedang login.
+Update payment dan order dalam satu DB transaction.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Payment bukan status pending
+Flash error: 'Pembayaran ini sudah diproses.'
+Cek status sebelum approve
+Transaksi DB gagal
+Flash error: 'Gagal memproses. Coba lagi.'
+try-catch + rollback
+
+Kesalahan Terbesar:
+Tidak menggunakan DB transaction — payment ter-approve tapi status order tidak berubah.
+
+7.5.02 — Reject Pembayaran
+
+Overview:
+Admin menolak bukti transfer. Wajib mengisi alasan penolakan. Status pesanan tetap pending — Customer dapat upload ulang.
+
+Step by Step:
+Admin klik 'Tolak' → modal dengan textarea alasan.
+Admin mengisi rejected_reason (wajib, min 10 karakter).
+Update payments: status=rejected, rejected_by, rejected_at, rejected_reason.
+Status pesanan tidak berubah (tetap pending).
+Redirect + flash 'Pembayaran ditolak.'
+
+Business Rules:
+rejected_reason wajib diisi — minimal 10 karakter.
+Penolakan tidak mengubah status order — Customer bisa upload bukti baru.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Alasan penolakan kosong
+Inline error: 'Alasan penolakan wajib diisi.'
+required|min:10
+Payment bukan pending
+Flash error: 'Pembayaran ini sudah diproses.'
+Cek status sebelum reject
+
+Kesalahan Terbesar:
+Tidak mengisi rejected_by — tidak ada audit trail siapa Admin yang menolak.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap approve dan reject dicatat ke application log dengan ID Admin, ID payment, dan ID order.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah Customer diberi notifikasi setelah approve/reject?
+Tidak di MVP v1 — Customer harus cek status pesanan secara manual.
+2026-05-19
+
+MODUL 15 — Manajemen Pengiriman & Tracking
+
+7.1 Tujuan Modul
+
+Admin membuat data pengiriman untuk pesanan yang sudah dikonfirmasi pembayarannya, menginput nomor resi, dan memperbarui status pengiriman secara manual. Setiap perubahan status menghasilkan log di shipment_tracking_logs.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Buat shipment, input resi, update status tracking
+Status pengiriman hanya bisa maju (tidak bisa mundur). Setelah delivered, tidak bisa diubah lagi.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Buat Shipment
+order_id, warehouse_id, shipping_cost, courier_name
+Validate → Insert shipments → Insert log preparing
+Redirect detail order + flash sukses
+Admin
+Input Resi
+shipment_id, tracking_number
+Validate → Update shipments.tracking_number
+Redirect detail + flash sukses
+Admin
+Update Status
+shipment_id, status baru, note, location
+Validate alur → Update shipments → Insert shipment_tracking_logs
+Redirect detail + flash sukses
+Admin
+Konfirmasi Delivered
+shipment_id
+Update status=delivered → Update orders=delivered → Kredit poin
+Redirect detail + flash sukses
+
+7.4 Alur Sistem
+
+Setelah payment di-approve, Admin membuat data shipment dari halaman detail pesanan. Status awal: preparing. Admin input resi saat paket diserahkan ke kurir (status: shipped). Update ke in_transit jika ada update lokasi, dan delivered saat paket tiba. Konfirmasi delivered memicu pemberian poin reward ke Customer.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Buat Shipment & Update Status
+
+Overview:
+Admin membuat data pengiriman setelah pembayaran dikonfirmasi, lalu secara bertahap memperbarui status. Setiap update status menghasilkan log tracking.
+
+Step by Step (Buat Shipment):
+Admin di /admin/orders/{id}, klik 'Buat Pengiriman'.
+Mengisi: courier_name, shipping_cost. Warehouse_id otomatis dari orders.warehouse_id.
+Dalam DB::transaction(): insert shipments (status=preparing) + insert shipment_tracking_logs (status=preparing, updated_by=admin_id).
+
+Step by Step (Update Status ke Delivered):
+Admin klik 'Update Status', pilih status baru, isi note dan location (opsional).
+Cek alur: preparing → shipped → in_transit → delivered (tidak boleh mundur atau loncat).
+Dalam DB::transaction():
+  a. Update shipments.status.
+  b. Insert shipment_tracking_logs.
+  c. Jika delivered: update orders.status=delivered, shipments.delivered_at=now().
+  d. Jika delivered dan order.point_earned > 0: kredit poin ke user_points, insert point_transactions.
+
+Business Rules:
+Satu pesanan hanya bisa memiliki satu shipment (UNIQUE order_id di shipments).
+Status hanya bisa maju: preparing → shipped → in_transit → delivered.
+Tracking number wajib diisi sebelum status bisa diubah ke shipped.
+Konfirmasi delivered memicu penambahan poin reward ke Customer secara atomik.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Status mundur/loncat
+Flash error: 'Perubahan status tidak valid.'
+Validasi urutan status di Controller
+Tracking number kosong saat shipped
+Flash error: 'Nomor resi wajib diisi sebelum status shipped.'
+Cek tracking_number sebelum update
+Shipment sudah ada
+Flash error: 'Pesanan ini sudah memiliki data pengiriman.'
+Cek UNIQUE constraint order_id
+
+Kesalahan Terbesar:
+Tidak memberikan poin saat konfirmasi delivered — Customer tidak mendapatkan reward. Logika kredit poin harus dalam transaksi yang sama.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap update status pengiriman otomatis tercatat di shipment_tracking_logs — berfungsi sebagai audit log sekaligus data tracking Customer.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah tracking otomatis terintegrasi dengan API kurir?
+Tidak di MVP v1 — tracking diinput manual oleh Admin.
+2026-05-19
+
+MODUL 16 — Monitoring Poin Reward
+
+7.1 Tujuan Modul
+
+Admin memantau saldo dan riwayat transaksi poin reward semua Customer. Modul ini bersifat read-only di MVP v1 — Admin tidak bisa menambah atau mengurangi poin secara manual.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat saldo poin per Customer, lihat riwayat transaksi poin
+Tidak bisa adjust poin manual di MVP v1.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat Saldo Poin
+Filter nama/email Customer
+Query user_points + users
+Tabel saldo poin per Customer
+Admin
+Lihat Riwayat Transaksi
+user_id
+Query point_transactions per user
+List mutasi poin Customer
+
+7.4 Alur Sistem
+
+Admin membuka /admin/points dan melihat daftar Customer beserta saldo poin. Klik Customer untuk melihat riwayat transaksi poin (credit dari pesanan delivered, debit dari redeem checkout). Semua data read-only.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Lihat Saldo & Riwayat Poin
+
+Overview:
+Admin melihat daftar Customer dengan saldo poin dan histori mutasi. Data dari tabel user_points dan point_transactions.
+
+Step by Step:
+Admin membuka /admin/points — tabel Customer + saldo poin, diurutkan saldo terbesar.
+Klik Customer → /admin/points/{user_id} — list point_transactions dengan type, amount, description, dan order terkait.
+
+Business Rules:
+Data hanya dibaca. Riwayat diurutkan dari terbaru (created_at DESC).
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Customer tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Tidak memfilter point_transactions per user — menampilkan semua mutasi dari semua Customer.
+
+7.6 Kebutuhan Audit / Logging
+
+TIDAK DIPERLUKAN — Modul ini read-only.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah Admin bisa adjust poin manual?
+Tidak di MVP v1 — masuk backlog v2.
+2026-05-19
+
+MODUL 17 — Moderasi Ulasan Produk
+
+7.1 Tujuan Modul
+
+Admin memantau dan memoderasi ulasan produk Customer. Admin dapat menyembunyikan ulasan yang tidak pantas tanpa menghapusnya dari database. Ulasan tersembunyi tidak tampil di halaman produk Customer.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat list ulasan, toggle visibility (tampil/sembunyi)
+Tidak bisa menghapus atau mengubah isi ulasan Customer.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat List Ulasan
+Filter produk, rating, visibility
+Query reviews + products + users
+Tabel daftar ulasan
+Admin
+Toggle Visibility
+review_id
+Toggle is_visible → Update reviews
+Redirect list + flash sukses
+
+7.4 Alur Sistem
+
+Admin membuka daftar ulasan dengan filter produk dan rating. Setiap baris: nama Customer, nama produk, rating, teks ulasan, status visibility. Klik toggle untuk menyembunyikan atau menampilkan ulasan kembali.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Toggle Visibility Ulasan
+
+Overview:
+Admin mengubah is_visible dari 1 ke 0 atau sebaliknya. Ulasan tersembunyi tidak tampil di frontend Customer.
+
+Step by Step:
+Admin membuka /admin/reviews, klik tombol toggle di baris ulasan.
+Controller: is_visible = !is_visible, update reviews.
+Redirect list + flash 'Status ulasan berhasil diubah.'
+
+Business Rules:
+is_visible = 0 → ulasan tidak tampil di halaman produk Customer.
+Ulasan tersembunyi tetap ada di DB dan bisa ditampilkan kembali kapanpun.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Ulasan tidak ditemukan
+Halaman 404
+Route model binding
+
+Kesalahan Terbesar:
+Soft delete ulasan alih-alih toggle is_visible — ulasan yang dihapus tidak bisa dipulihkan.
+
+7.6 Kebutuhan Audit / Logging
+
+DIPERLUKAN: Setiap perubahan visibility ulasan dicatat ke application log.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah ada fitur balas ulasan?
+Tidak di MVP v1.
+2026-05-19
+
+MODUL 18 — File Storage
+
+7.1 Tujuan Modul
+
+Modul ini menyediakan tampilan read-only daftar file yang tersimpan di sistem (tabel file_storages). Upload file dilakukan melalui modul masing-masing — tidak ada upload file mandiri dari modul ini di MVP v1.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Admin+
+Lihat daftar file storage
+Tidak bisa upload atau hapus file langsung dari modul ini di MVP v1.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat List File
+Filter, pagination
+Query file_storages
+Tabel daftar file + link preview
+
+7.4 Alur Sistem
+
+Admin membuka /admin/file-storages dan melihat daftar semua file yang terdaftar di sistem beserta link dan tanggal upload. Berguna untuk audit dan troubleshooting file orphan.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Lihat Daftar File
+
+Overview:
+Admin melihat seluruh file yang terdaftar di file_storages beserta link akses publik.
+
+Step by Step:
+Admin membuka /admin/file-storages.
+Query file_storages dengan pagination, order by created_at DESC.
+Tampilkan: ID, link (klikable untuk preview), tanggal upload.
+
+Business Rules:
+Read-only — tidak ada aksi modifikasi.
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Query gagal
+Halaman error generik Laravel
+Standard error handling
+
+Kesalahan Terbesar:
+Menampilkan seluruh file tanpa pagination — file_storages bisa sangat besar.
+
+7.6 Kebutuhan Audit / Logging
+
+TIDAK DIPERLUKAN — Modul ini read-only.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah ada manajemen file (hapus/replace) di MVP?
+Tidak di MVP v1 — hanya lihat daftar.
+2026-05-19
+
+MODUL 19 — Dashboard
+
+7.1 Tujuan Modul
+
+Modul ini menampilkan ringkasan statistik platform EssenseLuxe kepada Admin setelah login. Dashboard mencakup jumlah pesanan per status hari ini, total pendapatan, jumlah Customer terdaftar, dan produk dengan stok rendah. Semua data read-only.
+
+7.2 Aktor / Peran
+
+Aktor
+Aksi
+Restriction
+Semua Admin
+Lihat statistik dashboard
+Data tidak dibatasi berdasarkan role — semua Admin melihat data yang sama.
+
+7.3 Tabel Input → Process → Output
+
+Aktor
+Aksi
+Input
+Process
+Output
+Admin
+Lihat Dashboard
+Tidak ada input
+Query aggregasi dari orders, users, warehouse_stocks
+Halaman dashboard dengan widget statistik
+
+7.4 Alur Sistem
+
+Admin login dan otomatis redirect ke /admin/dashboard. Controller menjalankan query agregasi: COUNT orders per status hari ini, SUM total orders delivered, COUNT users aktif, dan daftar warehouse_stocks quantity < 5.
+
+7.5 Alur Fungsional Per Aksi
+
+7.5.01 — Lihat Dashboard
+
+Overview:
+Admin melihat ringkasan operasional platform dalam satu halaman. Data di-load fresh setiap akses (no caching di MVP v1).
+
+Step by Step:
+Admin mengakses /admin/dashboard.
+Controller menjalankan query:
+  a. Pesanan hari ini per status (pending, processing, shipped, delivered, cancelled).
+  b. Total revenue: SUM(orders.total) WHERE status = delivered.
+  c. Total Customer aktif: COUNT(users) WHERE deleted_at IS NULL.
+  d. Stok rendah: warehouse_stocks WHERE quantity < 5, join ke product_variants dan products.
+Data di-render ke view Blade sebagai widget/card statistik.
+
+Business Rules:
+No caching di MVP v1 — setiap load halaman query ke DB langsung.
+Threshold stok rendah: quantity < 5 (hardcoded di MVP).
+
+Error States:
+Kondisi Error
+Tampilan di UI
+Penanganan
+Query aggregasi gagal
+Halaman error generik
+Standard Laravel error handling
+
+Kesalahan Terbesar:
+Query dashboard tanpa index yang tepat di orders (status, created_at) — full table scan saat data besar.
+
+7.6 Kebutuhan Audit / Logging
+
+TIDAK DIPERLUKAN — Dashboard read-only.
+
+7.7 Log Diskusi
+
+Pertanyaan
+Jawaban
+Tanggal
+Apakah dashboard mendukung filter tanggal atau grafik?
+Tidak di MVP v1 — statistik dasar saja.
+2026-05-19
+
+8. Acceptance Criteria
+
+Acceptance Criteria untuk dokumen ini didokumentasikan dalam file Excel terpisah:
+
+File
+Format
+Keterangan
+EssenseLuxe_Admin_AcceptanceCriteria_v1.0.xlsx
+.xlsx
+Satu sheet per modul. Format GIVEN-WHEN-THEN.
+
+9. Middleware & Route Guard
+
+9.1 Daftar Middleware
+
+Middleware
+Fungsi
+Diterapkan Pada
+auth:admin
+Memvalidasi sesi guard 'admin'. Redirect ke /admin/login jika tidak ada sesi.
+Semua route /admin/* kecuali login
+guest:admin
+Mencegah Admin yang sudah login mengakses halaman login kembali.
+Route /admin/login
+role:superadmin
+Memverifikasi bahwa Admin yang login memiliki role Superadmin.
+Modul Role, Admin, Otorisasi
+can:module,action
+Custom middleware RBAC — cek authorization role untuk module+action tertentu.
+Semua route modul spesifik (opsional)
+
+9.2 Konfigurasi Guard Admin
+
+// config/auth.php
+'guards' => [
+    'web' => ['driver' => 'session', 'provider' => 'users'],
+    'admin' => ['driver' => 'session', 'provider' => 'admins'],
+],
+'providers' => [
+    'users'  => ['driver' => 'eloquent', 'model' => App\Models\User::class],
+    'admins' => ['driver' => 'eloquent', 'model' => App\Models\Admin::class],
+],
+
+9.3 Struktur Route Group Admin
+
+// routes/web.php
+Route::prefix('admin')->name('admin.')->group(function () {
+
+    Route::middleware('guest:admin')->group(function () {
+        Route::get('login',  [AdminAuthController::class, 'showLogin'])->name('login');
+        Route::post('login', [AdminAuthController::class, 'login']);
+    });
+
+    Route::middleware('auth:admin')->group(function () {
+        Route::post('logout',   [AdminAuthController::class, 'logout'])->name('logout');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Superadmin-only
+        Route::middleware('role:superadmin')->group(function () {
+            Route::resource('roles',  RoleController::class);
+            Route::resource('roles.authorizations', AuthorizationController::class);
+            Route::resource('admins', AdminController::class);
+        });
+
+        // Admin+ (semua role)
+        Route::resource('users',            UserController::class)->only(['index','show','destroy']);
+        Route::resource('categories',       CategoryController::class);
+        Route::resource('brands',           BrandController::class);
+        Route::resource('products',         ProductController::class);
+        Route::resource('products.variants',ProductVariantController::class);
+        Route::resource('warehouses',       WarehouseController::class);
+        Route::resource('stocks',           StockController::class)->only(['index','store']);
+        Route::resource('promotions',       PromotionController::class);
+        Route::resource('payment-accounts', PaymentAccountController::class);
+        Route::resource('orders',           OrderController::class)->only(['index','show']);
+        Route::post('orders/{order}/cancel',[OrderController::class,'cancel'])->name('orders.cancel');
+        Route::resource('payments',         PaymentController::class)->only(['index','show']);
+        Route::post('payments/{payment}/approve',[PaymentController::class,'approve'])->name('payments.approve');
+        Route::post('payments/{payment}/reject', [PaymentController::class,'reject'])->name('payments.reject');
+        Route::resource('shipments',        ShipmentController::class);
+        Route::resource('points',           PointController::class)->only(['index','show']);
+        Route::resource('reviews',          ReviewController::class)->only(['index','show']);
+        Route::post('reviews/{review}/toggle',[ReviewController::class,'toggle'])->name('reviews.toggle');
+        Route::resource('file-storages',    FileStorageController::class)->only(['index']);
+    });
+
+});
+
+
